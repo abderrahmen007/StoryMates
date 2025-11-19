@@ -1,8 +1,15 @@
 import SwiftUI
 
 struct LoginScreen: View {
-    @State private var username = ""
+    @StateObject private var networkManager = NetworkManager()
+    @StateObject private var authManager = AuthManager.shared
+    @State private var email = ""
     @State private var password = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showSuccessAlert = false
+    @State private var showRegisterScreen = false
+    @State private var showForgotPasswordScreen = false
     
     var body: some View {
         ZStack {
@@ -26,8 +33,8 @@ struct LoginScreen: View {
                     .foregroundColor(.gray)
                     .padding(.bottom, 20)
                 
-                // Username field
-                CustomTextField(placeholder: "USERNAME", text: $username)
+                // Email field
+                CustomTextField(placeholder: "EMAIL", text: $email)
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
@@ -40,28 +47,51 @@ struct LoginScreen: View {
                 // Forgot password text
                 HStack {
                     Spacer()
-                    Text("forgot password?")
+                    Button(action: {
+                        showForgotPasswordScreen = true
+                    }) {
+                        Text("forgot password?")
+                            .font(.custom("PressStart2P-Regular", size: 10))
+                            .foregroundColor(.red)
+                            .padding(.top, 10)
+                    }
+                    Spacer()
+                }
+                
+                // Error message
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
                         .font(.custom("PressStart2P-Regular", size: 10))
                         .foregroundColor(.red)
                         .padding(.top, 10)
-                    Spacer()
+                        .padding(.horizontal, 20)
                 }
                 
                 // Login button with custom image background
                 Button(action: {
-                    // Handle login action
+                    Task {
+                        await handleLogin()
+                    }
                 }) {
                     Image("button") // Replace with your custom button image
                         .resizable()
                         .scaledToFit()
                         .frame(width: 300, height: 100) // Adjust size as needed
                         .overlay(
-                            Text("Login")
-                                .font(.custom("PressStart2P-Regular", size: 20))
-                                .foregroundColor(.white)
+                            Group {
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Text("Login")
+                                        .font(.custom("PressStart2P-Regular", size: 20))
+                                        .foregroundColor(.white)
+                                }
+                            }
                         )
                 }
                 .padding(.top, 20)
+                .disabled(isLoading)
                 
                 // New adventurer text and Create Account button
                 HStack {
@@ -69,12 +99,13 @@ struct LoginScreen: View {
                         .font(.custom("PressStart2P-Regular", size: 10))
                         .foregroundColor(.black)
                     Button(action: {
-                        // Handle account creation action
+                        showRegisterScreen = true
                     }) {
                         Text("CREATE ACCOUNT")
                             .foregroundColor(.yellow)
                             .font(Font.custom("PressStart2P-Regular", size: 10))
-                            .padding(5)                   }
+                            .padding(5)
+                    }
                 }
                 .padding(.top, 20)
                 
@@ -127,6 +158,47 @@ struct LoginScreen: View {
                 .padding(.horizontal, 20) // Add horizontal padding for spacing
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure full screen use
+        }
+        .sheet(isPresented: $showRegisterScreen) {
+            RegisterScreen()
+        }
+        .sheet(isPresented: $showForgotPasswordScreen) {
+            ForgotPasswordScreen()
+        }
+        .alert("Success", isPresented: $showSuccessAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Login successful!")
+        }
+    }
+    
+    private func handleLogin() async {
+        // Reset error message
+        errorMessage = nil
+        
+        // Validate inputs
+        guard !email.isEmpty, !password.isEmpty else {
+            errorMessage = "Please fill in all fields"
+            return
+        }
+        
+        isLoading = true
+        
+        do {
+            let authResponse = try await networkManager.login(email: email, password: password)
+            authManager.saveTokens(
+                userId: authResponse.userId,
+                accessToken: authResponse.token.accessToken,
+                refreshToken: authResponse.token.refreshToken
+            )
+            isLoading = false
+            showSuccessAlert = true
+        } catch let error as NetworkError {
+            isLoading = false
+            errorMessage = error.errorDescription
+        } catch {
+            isLoading = false
+            errorMessage = "An unexpected error occurred"
         }
     }
 }

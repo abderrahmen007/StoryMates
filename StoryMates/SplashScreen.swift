@@ -9,19 +9,35 @@
 import SwiftUI
 
 struct SplashScreen: View {
+    @State private var showLogin = false
+    
     var body: some View {
-        VStack {
-            // Image for splash s#imageLiteral(resourceName: "background_land.png")creen
-            Image("splashscreen") // Ensure the logo image is added to your assets
-                .resizable()
-                .scaledToFit()
-                .frame(width: 1920, height: 880)
+        Group {
+            if showLogin {
+                LoginScreen()
+            } else {
+                VStack {
+                    // Image for splash s#imageLiteral(resourceName: "background_land.png")creen
+                    Image("splashscreen") // Ensure the logo image is added to your assets
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 1920, height: 880)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    LinearGradient(gradient: Gradient(colors: [Color.blue, Color.green]), startPoint: .top, endPoint: .bottom)
+                )
+                .edgesIgnoringSafeArea(.all)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.green]), startPoint: .top, endPoint: .bottom)
-        )
-        .edgesIgnoringSafeArea(.all)
+        .onAppear {
+            // Show splash screen for 2 seconds then navigate to login
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation {
+                    showLogin = true
+                }
+            }
+        }
     }
 }
 

@@ -9,10 +9,15 @@
 import SwiftUI
 
 struct RegisterScreen: View {
-    @State private var username = ""
+    @StateObject private var networkManager = NetworkManager()
+    @State private var name = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showSuccessAlert = false
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         ZStack {
@@ -29,7 +34,7 @@ struct RegisterScreen: View {
                 HStack {
                     // Back button
                     Button(action: {
-                        // Handle back navigation
+                        dismiss()
                     }) {
                         Image(systemName: "arrow.left.circle.fill")
                             .resizable()
@@ -52,8 +57,8 @@ struct RegisterScreen: View {
                     .foregroundColor(.gray)
                     .padding(.bottom, 20)
                 
-                // Username field
-                CustomTextField(placeholder: "USERNAME", text: $username)
+                // Name field
+                CustomTextField(placeholder: "NAME", text: $name)
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
@@ -75,21 +80,40 @@ struct RegisterScreen: View {
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
+                // Error message
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .font(.custom("PressStart2P-Regular", size: 10))
+                        .foregroundColor(.red)
+                        .padding(.top, 10)
+                        .padding(.horizontal, 20)
+                }
+                
                 // Create Account button with custom image background
                 Button(action: {
-                    // Handle account creation action
+                    Task {
+                        await handleSignup()
+                    }
                 }) {
                     Image("button") // Replace with your custom button image
                         .resizable()
                         .scaledToFit()
                         .frame(width: 300, height: 100) // Adjust size as needed
                         .overlay(
-                            Text("Create")
-                                .font(.custom("PressStart2P-Regular", size: 20))
-                                .foregroundColor(.white)
+                            Group {
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Text("Create")
+                                        .font(.custom("PressStart2P-Regular", size: 20))
+                                        .foregroundColor(.white)
+                                }
+                            }
                         )
                 }
                 .padding(.top, 20)
+                .disabled(isLoading)
                 
                 // Social login buttons (if needed)
                 SocialLoginButtons()
@@ -97,6 +121,48 @@ struct RegisterScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure full screen use
+        .alert("Success", isPresented: $showSuccessAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Account created successfully! Please login.")
+        }
+    }
+    
+    private func handleSignup() async {
+        // Reset error message
+        errorMessage = nil
+        
+        // Validate inputs
+        guard !name.isEmpty, !email.isEmpty, !password.isEmpty, !confirmPassword.isEmpty else {
+            errorMessage = "Please fill in all fields"
+            return
+        }
+        
+        guard password == confirmPassword else {
+            errorMessage = "Passwords do not match"
+            return
+        }
+        
+        guard password.count >= 6 else {
+            errorMessage = "Password must be at least 6 characters"
+            return
+        }
+        
+        isLoading = true
+        
+        do {
+            try await networkManager.signup(name: name, email: email, password: password)
+            isLoading = false
+            showSuccessAlert = true
+        } catch let error as NetworkError {
+            isLoading = false
+            errorMessage = error.errorDescription ?? "An error occurred"
+        } catch {
+            isLoading = false
+            errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+        }
     }
 }
 

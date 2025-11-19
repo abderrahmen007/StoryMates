@@ -1,7 +1,13 @@
 import SwiftUI
 
 struct ForgotPasswordScreen: View {
+    @StateObject private var networkManager = NetworkManager()
     @State private var email = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showSuccessAlert = false
+    @State private var showResetPasswordScreen = false
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         ZStack {
@@ -19,7 +25,7 @@ struct ForgotPasswordScreen: View {
                 // Back button
                 HStack {
                     Button(action: {
-                        // Handle back navigation
+                        dismiss()
                     }) {
                         Image(systemName: "arrow.left.circle.fill")
                             .resizable()
@@ -46,21 +52,40 @@ struct ForgotPasswordScreen: View {
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
+                // Error message
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .font(.custom("PressStart2P-Regular", size: 10))
+                        .foregroundColor(.red)
+                        .padding(.top, 10)
+                        .padding(.horizontal, 20)
+                }
+                
                 // Send Reset Link button with custom image background
                 Button(action: {
-                    // Handle reset password action
+                    Task {
+                        await handleForgotPassword()
+                    }
                 }) {
                     Image("button") // Replace with your custom button image
                         .resizable()
                         .scaledToFit()
                         .frame(width: 300, height: 100) // Adjust size as needed
                         .overlay(
-                            Text("Send Reset Link")
-                                .font(.custom("PressStart2P-Regular", size: 17))
-                                .foregroundColor(.white)
+                            Group {
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Text("Send Reset Link")
+                                        .font(.custom("PressStart2P-Regular", size: 17))
+                                        .foregroundColor(.white)
+                                }
+                            }
                         )
                 }
                 .padding(.top, 20)
+                .disabled(isLoading)
                 
                 // New adventurer text and Create Account button
                 HStack {
@@ -81,6 +106,47 @@ struct ForgotPasswordScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure full screen use
+        .alert("Success", isPresented: $showSuccessAlert) {
+            Button("OK") {
+                showResetPasswordScreen = true
+            }
+        } message: {
+            Text("Password reset code has been sent to your email. Please check your inbox.")
+        }
+        .fullScreenCover(isPresented: $showResetPasswordScreen) {
+            ResetPasswordScreen(email: email)
+        }
+    }
+    
+    private func handleForgotPassword() async {
+        // Reset error message
+        errorMessage = nil
+        
+        // Validate input
+        guard !email.isEmpty else {
+            errorMessage = "Please enter your email"
+            return
+        }
+        
+        // Basic email validation
+        guard email.contains("@") && email.contains(".") else {
+            errorMessage = "Please enter a valid email"
+            return
+        }
+        
+        isLoading = true
+        
+        do {
+            try await networkManager.forgotPassword(email: email)
+            isLoading = false
+            showSuccessAlert = true
+        } catch let error as NetworkError {
+            isLoading = false
+            errorMessage = error.errorDescription
+        } catch {
+            isLoading = false
+            errorMessage = "An unexpected error occurred"
+        }
     }
 }
 
