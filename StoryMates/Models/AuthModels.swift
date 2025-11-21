@@ -13,7 +13,7 @@ struct TokenResponse: Codable {
 }
 
 struct AuthResponse: Codable {
-    let userId: String
+    let userId: String      // was optional; make it non-optional for successful login
     let token: TokenResponse
 }
 
@@ -22,4 +22,3 @@ struct ErrorResponse: Codable {
     let statusCode: Int?
     let error: String?
 }
-

@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct Track: View {
     var body: some View {
         NavigationView {
             VStack {

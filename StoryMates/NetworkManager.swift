@@ -35,21 +35,30 @@ enum NetworkError: LocalizedError {
 }
 
 class NetworkManager: ObservableObject {
-    let baseURL = "https://backend-8fxcbbz8s-aboodas-projects-68bee841.vercel.app"
+    // Update this to your local server URL
+    let baseURL = "http://192.168.1.124:3001" // Example: Local development server
     
     func signup(name: String, email: String, password: String) async throws {
-        // Try  /auth/signup
         let endpoints = ["/auth/signup"]
         var lastError: Error?
         
         for endpoint in endpoints {
-            guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            // Print the full URL for debugging
+            let fullURL = "\(baseURL)\(endpoint)"
+            print("Attempting to connect to: \(fullURL)")
+            
+            guard let url = URL(string: fullURL) else {
+                print("❌ Failed to create URL from string: \(fullURL)")
+                lastError = NetworkError.badURL
                 continue
             }
         
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            // Add timeout interval
+            request.timeoutInterval = 10 // 10 seconds timeout
             
             let body: [String: String] = [
                 "name": name,
@@ -78,21 +87,13 @@ class NetworkManager: ObservableObject {
                 }
                 
                 if httpResponse.statusCode == 201 {
-                    return // Success!
+                    return
                 } else if httpResponse.statusCode == 401 {
-                    // Check if this is Vercel Deployment Protection
-                    if let responseString = String(data: data, encoding: .utf8),
-                       responseString.contains("Vercel Authentication") || responseString.contains("Authentication Required") {
-                        throw NetworkError.unknown("Vercel Deployment Protection is enabled. Please disable it in Vercel project settings to allow API access.")
-                    }
-                    // Otherwise, it's a real authentication error
                     throw NetworkError.invalidCredentials
                 } else if httpResponse.statusCode == 404 {
-                    // Endpoint not found, try next one
                     lastError = NetworkError.unknown("Endpoint not found: \(endpoint)")
                     continue
                 } else {
-                    // Try to decode error response
                     if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
                         let errorMessage = errorResponse.message
                         if errorMessage.contains("already in use") {
@@ -100,12 +101,7 @@ class NetworkManager: ObservableObject {
                         }
                         throw NetworkError.unknown(errorMessage)
                     } else {
-                        // If we can't decode, try to get raw string
                         if let errorString = String(data: data, encoding: .utf8), !errorString.isEmpty {
-                            // Check if it's HTML (Vercel protection page)
-                            if errorString.contains("<!doctype html>") || errorString.contains("Vercel Authentication") {
-                                throw NetworkError.unknown("Vercel Deployment Protection is enabled. Please disable it in Vercel project settings.")
-                            }
                             throw NetworkError.unknown(errorString)
                         }
                         throw NetworkError.unknown("Server error (Status: \(httpResponse.statusCode))")
@@ -117,12 +113,11 @@ class NetworkManager: ObservableObject {
             }
         }
         
-        // If we get here, all endpoints failed
         throw lastError ?? NetworkError.badServerResponse
     }
     
     func login(email: String, password: String) async throws -> AuthResponse {
-        let endpoints = [ "/auth/login"]
+        let endpoints = ["/auth/login"]
         var lastError: Error?
         
         for endpoint in endpoints {
@@ -133,6 +128,7 @@ class NetworkManager: ObservableObject {
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
             
             let body: [String: String] = [
                 "email": email,
@@ -149,21 +145,29 @@ class NetworkManager: ObservableObject {
                     continue
                 }
                 
-                if httpResponse.statusCode == 201 || httpResponse.statusCode == 200 {
+                if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+                    print("Login successful with status code: \(httpResponse.statusCode)")
+                    
+                    if let responseString = String(data: data, encoding: .utf8) {
+                        print("Login success body:", responseString)
+                    }
+                    
+                    let decoder = JSONDecoder()
+                    decoder.keyDecodingStrategy = .convertFromSnakeCase
+                    
                     do {
-                        let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
+                        let authResponse = try decoder.decode(AuthResponse.self, from: data)
+                        print("Decoded AuthResponse:", authResponse)
                         return authResponse
                     } catch {
+                        print("Login decoding error:", error)
+                        if let responseString = String(data: data, encoding: .utf8) {
+                            print("Login body (on decode error):", responseString)
+                        }
                         lastError = NetworkError.badServerResponse
                         continue
                     }
-                
                 } else if httpResponse.statusCode == 401 {
-                    // Check if this is Vercel Deployment Protection
-                    if let responseString = String(data: data, encoding: .utf8),
-                       responseString.contains("Vercel Authentication") || responseString.contains("Authentication Required") {
-                        throw NetworkError.unknown("Vercel Deployment Protection is enabled. Please disable it in Vercel project settings to allow API access.")
-                    }
                     throw NetworkError.invalidCredentials
                 } else if httpResponse.statusCode == 404 {
                     lastError = NetworkError.unknown("Endpoint not found: \(endpoint)")

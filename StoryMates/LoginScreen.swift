@@ -9,6 +9,7 @@ struct LoginScreen: View {
     @State private var errorMessage: String?
     @State private var showSuccessAlert = false
     @State private var showRegisterScreen = false
+    @State private var showHomeView = false
     @State private var showForgotPasswordScreen = false
     
     var body: some View {
@@ -165,18 +166,21 @@ struct LoginScreen: View {
         .sheet(isPresented: $showForgotPasswordScreen) {
             ForgotPasswordScreen()
         }
+        .fullScreenCover(isPresented: $showHomeView) {
+            HomeView()
+        }
         .alert("Success", isPresented: $showSuccessAlert) {
-            Button("OK", role: .cancel) {}
+            Button("OK", role: .cancel) {
+                showHomeView = true
+            }
         } message: {
             Text("Login successful!")
         }
     }
     
     private func handleLogin() async {
-        // Reset error message
         errorMessage = nil
         
-        // Validate inputs
         guard !email.isEmpty, !password.isEmpty else {
             errorMessage = "Please fill in all fields"
             return
@@ -186,8 +190,9 @@ struct LoginScreen: View {
         
         do {
             let authResponse = try await networkManager.login(email: email, password: password)
+            let userId = authResponse.userId
             authManager.saveTokens(
-                userId: authResponse.userId,
+                userId: userId,
                 accessToken: authResponse.token.accessToken,
                 refreshToken: authResponse.token.refreshToken
             )

@@ -9,12 +9,17 @@
 import SwiftUI
 
 struct SplashScreen: View {
-    @State private var showLogin = false
+    @State private var isActive = false
+    @StateObject private var authManager = AuthManager.shared
     
     var body: some View {
         Group {
-            if showLogin {
-                LoginScreen()
+            if isActive {
+                if authManager.isAuthenticated {
+                    HomeView()
+                } else {
+                    LoginScreen()
+                }
             } else {
                 VStack {
                     // Image for splash s#imageLiteral(resourceName: "background_land.png")creen
@@ -31,10 +36,10 @@ struct SplashScreen: View {
             }
         }
         .onAppear {
-            // Show splash screen for 2 seconds then navigate to login
+            // Show splash screen for 2 seconds then navigate
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 withAnimation {
-                    showLogin = true
+                    isActive = true
                 }
             }
         }
