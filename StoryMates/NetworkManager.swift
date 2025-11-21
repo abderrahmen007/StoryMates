@@ -36,7 +36,7 @@ enum NetworkError: LocalizedError {
 
 class NetworkManager: ObservableObject {
     // Update this to your local server URL
-    let baseURL = "http://192.168.1.124:3001" // Example: Local development server
+    let baseURL = "http://192.168.1.195:3001" // Example: Local development server
     
     func signup(name: String, email: String, password: String) async throws {
         let endpoints = ["/auth/signup"]
@@ -290,5 +290,51 @@ class NetworkManager: ObservableObject {
         }
         
         throw lastError ?? NetworkError.badServerResponse
+    }
+    
+    // MARK: - Games API
+    
+    func fetchPopularGames() async throws -> [Game] {
+        guard let url = URL(string: "\(baseURL)/games/popular") else {
+            throw NetworkError.badURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.badServerResponse
+        }
+        
+        return try JSONDecoder().decode([Game].self, from: data)
+    }
+    
+    func fetchGamesByGenre(genre: String) async throws -> [Game] {
+        guard let encodedGenre = genre.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "\(baseURL)/games/genre/\(encodedGenre)") else {
+            throw NetworkError.badURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.badServerResponse
+        }
+        
+        return try JSONDecoder().decode([Game].self, from: data)
+    }
+    
+    func searchGames(query: String) async throws -> [Game] {
+        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/games/search?q=\(encodedQuery)") else {
+            throw NetworkError.badURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.badServerResponse
+        }
+        
+        return try JSONDecoder().decode([Game].self, from: data)
     }
 }
