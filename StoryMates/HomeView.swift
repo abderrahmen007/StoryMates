@@ -15,7 +15,7 @@ struct HomeView: View {
                 .edgesIgnoringSafeArea(.all)
             
             // Cloud animation (optional, if available)
-            // AnimatedClouds() 
+            AnimatedClouds() 
             
             VStack(spacing: 0) {
                 // Search Bar
