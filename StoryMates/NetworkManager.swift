@@ -35,8 +35,8 @@ enum NetworkError: LocalizedError {
 }
 
 class NetworkManager: ObservableObject {
-    // Update this to your local server URL
-    let baseURL = "http://192.168.1.195:3001" // Example: Local development server
+    // Update this to your local server URL (localhost for iOS Simulator)
+    let baseURL = "http://localhost:3001"
     
     func signup(name: String, email: String, password: String) async throws {
         let endpoints = ["/auth/signup"]
