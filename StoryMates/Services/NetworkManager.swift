@@ -36,7 +36,7 @@ enum NetworkError: LocalizedError {
 
 class NetworkManager: ObservableObject {
     // Update this to your local server URL
-    let baseURL = "http://192.168.1.195:3001" // Example: Local development server
+    let baseURL = "http://192.168.1.95:3001" // Local development server
     
     func signup(name: String, email: String, password: String) async throws {
         let endpoints = ["/auth/signup"]
@@ -336,5 +336,140 @@ class NetworkManager: ObservableObject {
         }
         
         return try JSONDecoder().decode([Game].self, from: data)
+    }
+    
+    func getGameDetails(id: Int) async throws -> Game {
+        guard let url = URL(string: "\(baseURL)/games/\(id)") else {
+            throw NetworkError.badURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.badServerResponse
+        }
+        
+        return try JSONDecoder().decode(Game.self, from: data)
+    }
+    
+    func addToCollection(userId: String, gameId: Int, status: String) async throws {
+        guard let url = URL(string: "\(baseURL)/user/\(userId)/collection") else {
+            throw NetworkError.badURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "gameId": gameId,
+            "status": status
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
+            throw NetworkError.badServerResponse
+        }
+    }
+    
+    func getCollection(userId: String) async throws -> [CollectionItem] {
+        guard let url = URL(string: "\(baseURL)/user/\(userId)/collection") else {
+            throw NetworkError.badURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.badServerResponse
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode([CollectionItem].self, from: data)
+    }
+    
+    // MARK: - Missions API
+    
+    func fetchMissions(gameId: Int, gameName: String) async throws -> GameMissions {
+        guard let encodedGameName = gameName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/games/\(gameId)/missions?gameName=\(encodedGameName)") else {
+            print("❌ Invalid URL for missions: \(gameName)")
+            throw NetworkError.badURL
+        }
+        
+        print("🔍 Fetching missions from: \(url.absoluteString)")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ Invalid response type")
+                throw NetworkError.badServerResponse
+            }
+            
+            print("📥 Response status: \(httpResponse.statusCode)")
+            
+            if httpResponse.statusCode == 404 {
+                print("❌ No walkthrough found (404)")
+                throw NetworkError.unknown("No walkthrough found for this game")
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                print("❌ Server error: \(httpResponse.statusCode)")
+                throw NetworkError.badServerResponse
+            }
+            
+            let missions = try JSONDecoder().decode(GameMissions.self, from: data)
+            print("✅ Successfully decoded \(missions.missions.count) missions")
+            return missions
+        } catch {
+            print("❌ Error fetching missions: \(error)")
+            throw error
+        }
+    }
+    
+    func getMissionProgress(userId: String, gameId: Int) async throws -> MissionProgress {
+        guard let url = URL(string: "\(baseURL)/user/\(userId)/collection/\(gameId)/missions/progress") else {
+            throw NetworkError.badURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.badServerResponse
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(MissionProgress.self, from: data)
+    }
+    
+    func toggleMission(userId: String, gameId: Int, missionNumber: Int, totalMissions: Int) async throws -> MissionProgress {
+        guard let url = URL(string: "\(baseURL)/user/\(userId)/collection/\(gameId)/missions/\(missionNumber)/toggle") else {
+            throw NetworkError.badURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "totalMissions": totalMissions
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NetworkError.badServerResponse
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(MissionProgress.self, from: data)
     }
 }

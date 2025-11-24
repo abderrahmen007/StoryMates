@@ -1,12 +1,7 @@
 import SwiftUI
 
 struct ForgotPasswordScreen: View {
-    @StateObject private var networkManager = NetworkManager()
-    @State private var email = ""
-    @State private var isLoading = false
-    @State private var errorMessage: String?
-    @State private var showSuccessAlert = false
-    @State private var showResetPasswordScreen = false
+    @StateObject private var viewModel = ForgotPasswordViewModel()
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -48,12 +43,12 @@ struct ForgotPasswordScreen: View {
                     .padding(.bottom, 20).frame(width: 350)
                 
                 // Email field
-                CustomTextField(placeholder: "EMAIL", text: $email)
+                CustomTextField(placeholder: "EMAIL", text: $viewModel.email)
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
                 // Error message
-                if let errorMessage = errorMessage {
+                if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .font(.custom("PressStart2P-Regular", size: 10))
                         .foregroundColor(.red)
@@ -64,7 +59,7 @@ struct ForgotPasswordScreen: View {
                 // Send Reset Link button with custom image background
                 Button(action: {
                     Task {
-                        await handleForgotPassword()
+                        await viewModel.handleForgotPassword()
                     }
                 }) {
                     Image("button") // Replace with your custom button image
@@ -73,7 +68,7 @@ struct ForgotPasswordScreen: View {
                         .frame(width: 300, height: 100) // Adjust size as needed
                         .overlay(
                             Group {
-                                if isLoading {
+                                if viewModel.isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
@@ -85,7 +80,7 @@ struct ForgotPasswordScreen: View {
                         )
                 }
                 .padding(.top, 20)
-                .disabled(isLoading)
+                .disabled(viewModel.isLoading)
                 
                 // New adventurer text and Create Account button
                 HStack {
@@ -106,46 +101,15 @@ struct ForgotPasswordScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure full screen use
-        .alert("Success", isPresented: $showSuccessAlert) {
+        .alert("Success", isPresented: $viewModel.showSuccessAlert) {
             Button("OK") {
-                showResetPasswordScreen = true
+                viewModel.showResetPasswordScreen = true
             }
         } message: {
             Text("Password reset code has been sent to your email. Please check your inbox.")
         }
-        .fullScreenCover(isPresented: $showResetPasswordScreen) {
-            ResetPasswordScreen(email: email)
-        }
-    }
-    
-    private func handleForgotPassword() async {
-        // Reset error message
-        errorMessage = nil
-        
-        // Validate input
-        guard !email.isEmpty else {
-            errorMessage = "Please enter your email"
-            return
-        }
-        
-        // Basic email validation
-        guard email.contains("@") && email.contains(".") else {
-            errorMessage = "Please enter a valid email"
-            return
-        }
-        
-        isLoading = true
-        
-        do {
-            try await networkManager.forgotPassword(email: email)
-            isLoading = false
-            showSuccessAlert = true
-        } catch let error as NetworkError {
-            isLoading = false
-            errorMessage = error.errorDescription
-        } catch {
-            isLoading = false
-            errorMessage = "An unexpected error occurred"
+        .fullScreenCover(isPresented: $viewModel.showResetPasswordScreen) {
+            ResetPasswordScreen(email: viewModel.email)
         }
     }
 }

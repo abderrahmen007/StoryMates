@@ -9,14 +9,7 @@
 import SwiftUI
 
 struct RegisterScreen: View {
-    @StateObject private var networkManager = NetworkManager()
-    @State private var name = ""
-    @State private var email = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
-    @State private var isLoading = false
-    @State private var errorMessage: String?
-    @State private var showSuccessAlert = false
+    @StateObject private var viewModel = RegisterViewModel()
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -58,30 +51,30 @@ struct RegisterScreen: View {
                     .padding(.bottom, 20)
                 
                 // Name field
-                CustomTextField(placeholder: "NAME", text: $name)
+                CustomTextField(placeholder: "NAME", text: $viewModel.name)
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
                 // Email field
-                CustomTextField(placeholder: "EMAIL", text: $email)
+                CustomTextField(placeholder: "EMAIL", text: $viewModel.email)
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.top, 10)
                     .padding(.horizontal, 20)
                 
                 // Password field
-                CustomTextField(placeholder: "PASSWORD", text: $password, isSecure: true)
+                CustomTextField(placeholder: "PASSWORD", text: $viewModel.password, isSecure: true)
                     .padding(.top, 10)
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
                 // Confirm Password field
-                CustomTextField(placeholder: "CONFIRM PASSWORD", text: $confirmPassword, isSecure: true)
+                CustomTextField(placeholder: "CONFIRM PASSWORD", text: $viewModel.confirmPassword, isSecure: true)
                     .padding(.top, 10)
                     .font(.custom("PressStart2P-Regular", size: 10))
                     .padding(.horizontal, 20)
                 
                 // Error message
-                if let errorMessage = errorMessage {
+                if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .font(.custom("PressStart2P-Regular", size: 10))
                         .foregroundColor(.red)
@@ -92,7 +85,7 @@ struct RegisterScreen: View {
                 // Create Account button with custom image background
                 Button(action: {
                     Task {
-                        await handleSignup()
+                        await viewModel.handleSignup()
                     }
                 }) {
                     Image("button") // Replace with your custom button image
@@ -101,7 +94,7 @@ struct RegisterScreen: View {
                         .frame(width: 300, height: 100) // Adjust size as needed
                         .overlay(
                             Group {
-                                if isLoading {
+                                if viewModel.isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
@@ -113,7 +106,7 @@ struct RegisterScreen: View {
                         )
                 }
                 .padding(.top, 20)
-                .disabled(isLoading)
+                .disabled(viewModel.isLoading)
                 
                 // Social login buttons (if needed)
                 SocialLoginButtons()
@@ -121,47 +114,12 @@ struct RegisterScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity) // Ensure full screen use
-        .alert("Success", isPresented: $showSuccessAlert) {
+        .alert("Success", isPresented: $viewModel.showSuccessAlert) {
             Button("OK") {
                 dismiss()
             }
         } message: {
             Text("Account created successfully! Please login.")
-        }
-    }
-    
-    private func handleSignup() async {
-        // Reset error message
-        errorMessage = nil
-        
-        // Validate inputs
-        guard !name.isEmpty, !email.isEmpty, !password.isEmpty, !confirmPassword.isEmpty else {
-            errorMessage = "Please fill in all fields"
-            return
-        }
-        
-        guard password == confirmPassword else {
-            errorMessage = "Passwords do not match"
-            return
-        }
-        
-        guard password.count >= 6 else {
-            errorMessage = "Password must be at least 6 characters"
-            return
-        }
-        
-        isLoading = true
-        
-        do {
-            try await networkManager.signup(name: name, email: email, password: password)
-            isLoading = false
-            showSuccessAlert = true
-        } catch let error as NetworkError {
-            isLoading = false
-            errorMessage = error.errorDescription ?? "An error occurred"
-        } catch {
-            isLoading = false
-            errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
         }
     }
 }

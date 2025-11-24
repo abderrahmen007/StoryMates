@@ -46,6 +46,11 @@ class AuthManager: ObservableObject {
         self.isAuthenticated = false
     }
     
+    // Public API for signing out from the app.
+    func logout() {
+        clearAuth()
+    }
+    
     private func loadAuthState() {
         if let userId = UserDefaults.standard.string(forKey: userIdKey),
            let _ = UserDefaults.standard.string(forKey: accessTokenKey) {
@@ -54,4 +59,3 @@ class AuthManager: ObservableObject {
         }
     }
 }
-

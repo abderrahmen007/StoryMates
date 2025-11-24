@@ -7,6 +7,9 @@ struct Game: Codable, Identifiable {
     let rating: Double?
     let cover: GameCover?
     let genres: [GameGenre]?
+    let description: String?
+    let screenshots: [String]?
+    let trailers: [String]?
     
     struct GameCover: Codable {
         let id: Int
