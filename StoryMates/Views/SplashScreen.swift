@@ -11,12 +11,13 @@ import SwiftUI
 struct SplashScreen: View {
     @State private var isActive = false
     @StateObject private var authManager = AuthManager.shared
+    @State private var navController = UINavigationController()
     
     var body: some View {
         Group {
             if isActive {
                 if authManager.isAuthenticated {
-                    HomeView()
+                    MainTabView()
                 } else {
                     LoginScreen()
                 }
