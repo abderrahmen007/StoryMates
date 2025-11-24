@@ -3,18 +3,15 @@ import SwiftUI
 struct ChatView: View {
     @StateObject private var vm = ConversationViewModel()
     let userId: String
-
     @State private var showDrawer: Bool = false
-    @State private var editingMessageId: String?
-    @State private var isEditingMode = false
 
     var body: some View {
         ZStack(alignment: .leading) {
             // Main chat area
             VStack(spacing: 0) {
-                TopBar(title: vm.selectedConversation?.title ?? "NEW QUEST", onMenuClick: {
+                TopBar(title: vm.selectedConversation?.title ?? "NEW QUEST") {
                     withAnimation { showDrawer.toggle() }
-                })
+                }
 
                 if let err = vm.error {
                     Text(err)
@@ -23,10 +20,10 @@ struct ChatView: View {
                         .padding(8)
                 }
 
-                ChatScrollView(vm: vm, userId: userId, editingMessageId: $editingMessageId, isEditingMode: $isEditingMode)
+                ChatScrollView(vm: vm, userId: userId)
                     .environmentObject(vm)
 
-                InputBar()
+                InputBar(userId: userId)
                     .environmentObject(vm)
             }
             .background(
@@ -38,25 +35,40 @@ struct ChatView: View {
 
             // Drawer overlay
             if showDrawer {
-                Color.black.opacity(0.4)
-                    .ignoresSafeArea()
-                    .onTapGesture { withAnimation { showDrawer = false } }
+                ZStack(alignment: .leading) {
+                    // Semi-transparent background
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation { showDrawer = false }
+                        }
 
-                DrawerContent(
-                    conversations: vm.conversations,
-                    onConversationClick: { conv in
-                        vm.selectConversation(conv, userId: userId)
-                        withAnimation { showDrawer = false }
-                    },
-                    onClose: { withAnimation { showDrawer = false } }
-                )
-                .transition(.move(edge: .leading))
+                    // Drawer content
+                    DrawerContent(
+                        vm: vm,
+                        userId: userId,
+                        conversations: vm.conversations,
+                        onConversationClick: { conv in
+                            vm.selectConversation(conv, userId: userId)
+                            withAnimation { showDrawer = false }
+                        },
+                        onClose: { withAnimation { showDrawer = false } },
+                        onCreateNewConversation: {
+                            Task {
+                                await vm.createNewConversation(title: "New Conversation", userId: userId)
+                                withAnimation { showDrawer = false }
+                            }
+                        }
+                    )
+                    .frame(width: 260)
+                    .transition(.move(edge: .leading))
+                   
+                }
+                .zIndex(1)
             }
         }
         .animation(.easeInOut, value: showDrawer)
-        .onAppear {
-            vm.loadConversations(userId: userId)
-        }
+        .onAppear { vm.loadConversations(userId: userId) }
     }
 }
 
@@ -87,8 +99,6 @@ struct TopBar: View {
 struct ChatScrollView: View {
     @ObservedObject var vm: ConversationViewModel
     let userId: String
-    @Binding var editingMessageId: String?
-    @Binding var isEditingMode: Bool
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -134,11 +144,11 @@ struct ChatScrollView: View {
                 Menu {
                     Button("Edit") {
                         vm.messageInput = msg.content
-                        editingMessageId = msg.id
-                        isEditingMode = true
+                        vm.editingMessageId = msg.id
+                        vm.isEditingMode = true
                     }
                     Button("Delete", role: .destructive) {
-                        vm.deleteMessage(messageId: msg.id, userId: userId)
+                        vm.deleteMessage(conversationId:msg.conversationId , messageId: msg.id, userId: userId)
                     }
                 } label: {
                     Image("drop_down_icon")
@@ -147,7 +157,7 @@ struct ChatScrollView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 8).zIndex(3)
     }
 
     @ViewBuilder
@@ -171,9 +181,10 @@ struct ChatScrollView: View {
     }
 }
 
-// MARK: - Input Bar
+// MARK: - InputBar
 struct InputBar: View {
     @EnvironmentObject var viewModel: ConversationViewModel
+    let userId: String
 
     var body: some View {
         ZStack {
@@ -188,12 +199,6 @@ struct InputBar: View {
                 )
 
             HStack(spacing: 12) {
-//                Button(action: { print("Camera tapped") }) {
-//                    Image("add_image_button")
-//                        .resizable()
-//                        .frame(width: 32, height: 32)
-//                }
-
                 TextField("Type your message…", text: $viewModel.messageInput)
                     .font(.custom("PressStart2P-Regular", size: 12))
                     .padding(.vertical, 10)
@@ -202,9 +207,12 @@ struct InputBar: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.gray.opacity(0.45), lineWidth: 1)
                     )
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
 
-                Button(action: { viewModel.sendMessage(userId: "user_id") }) {
+                Button(action: {
+                    
+                    viewModel.sendOrEditMessage(userId: userId)
+                }) {
                     Image("send")
                         .resizable()
                         .frame(width: 32, height: 32)
@@ -215,54 +223,141 @@ struct InputBar: View {
         .frame(height: 65)
         .padding(.horizontal)
         .padding(.bottom, 40)
+        .zIndex(3)
     }
 }
 
 // MARK: - Drawer Content
 struct DrawerContent: View {
+    @ObservedObject var vm: ConversationViewModel
+    let userId: String
     let conversations: [Conversation]
     let onConversationClick: (Conversation) -> Void
     let onClose: () -> Void
+    let onCreateNewConversation: () -> Void
 
     var body: some View {
-        VStack {
-            HStack {
-                Spacer()
-                Button(action: onClose) {
-                    Image("x_icon")
-                        .resizable()
-                        .frame(width: 28, height: 28)
+            VStack {
+                // Close icon
+                HStack {
+                    Spacer()
+                    Button(action: onClose) {
+                        Image("x_icon")
+                            .resizable()
+                            .frame(width: 28, height: 28)
+                    }
                 }
-            }
-            .padding(.bottom, 12)
+                .padding(.bottom, 12)
 
-            Text("HISTORY")
-                .font(.custom("PressStart2P-Regular", size: 14))
+                // HISTORY + ADD BUTTON
+                HStack {
+                    Text("HISTORY")
+                        .font(.custom("PressStart2P-Regular", size: 14))
+                        .padding(6)
+                    Spacer()
+                    Button(action: {
+                        Task {
+                            await vm.createNewConversation(title: "New Conversation", userId: userId)
+                        }
+                    }) {
+                        Image("icon_plus")
+                            .resizable()
+                            .frame(width: 22, height: 22)
+                    }
+                }
                 .padding(.vertical, 8)
 
-            ScrollView {
-                VStack(spacing: 8) {
-                    ForEach(conversations) { conv in
-                        Button(action: { onConversationClick(conv) }) {
-                            ZStack {
-                                Image("container")
-                                    .resizable()
-                                    .frame(height: 60)
-                                    .cornerRadius(8)
-                                Text(conv.title)
-                                    .font(.custom("PressStart2P-Regular", size: 12))
-                                    .foregroundColor(.black)
-                                    .padding(.leading, 12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(vm.conversations) { conv in
+                            ConversationRow(conv: conv, vm: vm, userId: userId, onSelect: {
+                                vm.selectConversation(conv, userId: userId)
+                                onClose()
+                            })
                         }
                     }
                 }
             }
-            Spacer()
+            .frame(width: 260)
+            .padding(16)
+            .background(Color(red: 254/255, green: 238/255, blue: 176/255))
+        .zIndex(2) // ensure drawer is tappable above overlay
+    }
+}
+
+
+
+struct ConversationRow: View {
+    let conv: Conversation
+    @ObservedObject var vm: ConversationViewModel
+    let userId: String
+    let onSelect: () -> Void
+
+    @State private var isEditing = false
+    @State private var editText: String = ""
+
+    var body: some View {
+        HStack {
+            if isEditing {
+                TextField("Title", text: $editText)
+                    .font(.custom("PressStart2P-Regular", size: 12))
+                    .textFieldStyle(.roundedBorder)
+
+                Button(action: {
+                    Task {
+                        await vm.editConversationTitle(conversationId: conv.id, newTitle: editText)
+                        isEditing = false
+                    }
+                }) {
+                    Image("send")
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                }
+
+                Button(action: {
+                    isEditing = false
+                    editText = conv.title
+                }) {
+                    Image("x_icon")
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                }
+            } else {
+                Text(conv.title)
+                    .font(.custom("PressStart2P-Regular", size: 12))
+                    .lineLimit(2)
+                    .onTapGesture { onSelect() }
+
+                Spacer()
+
+                Button(action: {
+                    editText = conv.title
+                    isEditing = true
+                }) {
+                    Image("update_ic")
+                        .resizable()
+                        .frame(width: 24, height: 24).foregroundColor(.white)
+                }
+
+                Button(action: {
+                    Task {
+                        await vm.deleteConversation(conversationId: conv.id)
+                        }
+                }) {
+                    Image("delete_ic")
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                        .foregroundColor(.red)
+                }
+            }
         }
-        .frame(width: 260)
-        .padding(16)
-        .background(Color(red: 254/255, green: 238/255, blue: 176/255))
+        .padding(8)
+        .background(
+            Image("container")
+                .resizable()
+                .scaledToFill()
+                .clipped()
+        )
+        .cornerRadius(8)
     }
 }

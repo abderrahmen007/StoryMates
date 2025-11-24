@@ -4,20 +4,21 @@ import SwiftUI
 
 // MARK: - MainTabView (SwiftUI TabView, tap-to-show nav bar)
 struct MainTabView: View {
-    @State private var selectedTab: MainTab = .home
+    @State private var selectedTab: MainTab = .chat
     @State private var showTabBar: Bool = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            ChatView(userId: "123e4567-e89b-12d3-a456-426614174000")
+                .tabItem {
+                    Label("CHAT", systemImage: "message.fill")
+                }
             HomeView()
                 .tabItem {
                     Label("HOME", systemImage: "house.fill")
                 }
                 .tag(MainTab.home)
-            ChatView(userId: "123e4567-e89b-12d3-a456-426614174000")
-                .tabItem {
-                    Label("CHAT", systemImage: "message.fill")
-                }
+
                 .tag(MainTab.chat)
         }
         .toolbar(showTabBar ? .visible : .hidden, for: .tabBar)
@@ -38,8 +39,9 @@ struct MainTabView: View {
 }
 
 enum MainTab: String, CaseIterable {
-    case home = "home"
     case chat = "chat"
+    case home = "home"
+
 }
 
 // MARK: - Previews
