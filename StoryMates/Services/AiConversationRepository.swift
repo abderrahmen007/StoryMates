@@ -60,6 +60,14 @@ final class AiConversationRepository {
 
             guard 200...299 ~= http.statusCode else {
                 log("❌ Server error \(http.statusCode)")
+                
+                // Handle 401 Unauthorized - invalid or expired token
+                if http.statusCode == 401 {
+                    log("⚠️ Token is invalid or expired - clearing auth")
+                    AuthManager.shared.clearAuth()
+                    throw NetworkError.unknown("Your session has expired. Please log in again.")
+                }
+                
                 if let err = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
                     log("❌ Error message: \(err.message)")
                     throw NetworkError.unknown(err.message)
@@ -81,17 +89,31 @@ final class AiConversationRepository {
     
     func makeRequestRaw(_ path: String, method: String = "GET", token: String? = nil) async throws -> Data {
         
-        var request = URLRequest(url: URL(string: baseURL + path)!)
+        guard let url = URL(string: baseURL + path) else {
+            log("❌ Bad URL: \(baseURL + path)")
+            throw NetworkError.badURL
+        }
+        
+        var request = URLRequest(url: url)
         request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let token = token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              200..<300 ~= httpResponse.statusCode else {
-            throw URLError(.badServerResponse)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            log("❌ Invalid server response")
+            throw NetworkError.badServerResponse
+        }
+        
+        log("📡 Status Code: \(httpResponse.statusCode)")
+
+        // Accept 200-299 (OK) and 204 (No Content)
+        guard (200...299 ~= httpResponse.statusCode) || httpResponse.statusCode == 204 else {
+            log("❌ Server error \(httpResponse.statusCode)")
+            throw NetworkError.badServerResponse
         }
 
         return data  // return raw data instead of decoding
@@ -122,8 +144,14 @@ final class AiConversationRepository {
             return try await makeRequest("/\(conversationId)/messages?userId=\(userId)", token: token)
         }
 
-        func editMessage(messageId: String, newText: String, token: String) async throws -> Message {
+        func editMessage(messageId: String, dto: EditMessageDto, token: String) async throws -> Message {
             log("📌 editMessage() called for msg \(messageId)")
+            let body = try JSONEncoder().encode(dto)
+            return try await makeRequest("/messages/\(messageId)", method: "PUT", body: body, token: token)
+        }
+
+        func editMessageContent(messageId: String, newText: String, token: String) async throws -> Message {
+            log("📌 editMessageContent() called for msg \(messageId)")
             let body = try JSONEncoder().encode(["content": newText])
             return try await makeRequest("/messages/\(messageId)", method: "PUT", body: body, token: token)
         }
@@ -132,7 +160,7 @@ final class AiConversationRepository {
         log("📌 deleteMessage() called for conv \(conversationId), msg \(messageId)")
         
         // Make the request and get raw data for logging
-        let responseData: Data = try await makeRequestRaw("/\(conversationId)/messages/\(messageId)", method: "DELETE", token: token)
+        let responseData: Data = try await makeRequestRaw("/messages/\(messageId)", method: "DELETE", token: token)
         
         // Log the response
         if let responseString = String(data: responseData, encoding: .utf8) {

@@ -1,9 +1,11 @@
 import SwiftUI
+import PhotosUI
 
 struct ChatView: View {
     @StateObject private var vm = ConversationViewModel()
     let userId: String
     @State private var showDrawer: Bool = false
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -27,11 +29,18 @@ struct ChatView: View {
                     .environmentObject(vm)
             }
             .background(
-                Image("background_general")
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
+                Group {
+                    if themeManager.isDarkMode {
+                        DarkThemeBackground()
+                    } else {
+                        Image("background_land")
+                            .resizable()
+                            .scaledToFill()
+                            .edgesIgnoringSafeArea(.all)
+                    }
+                }
             )
+
 
             // Drawer overlay
             if showDrawer {
@@ -68,7 +77,9 @@ struct ChatView: View {
             }
         }
         .animation(.easeInOut, value: showDrawer)
-        .onAppear { vm.loadConversations(userId: userId) }
+        .onAppear { 
+            vm.loadConversations(userId: userId)
+        }
     }
 }
 
@@ -128,6 +139,27 @@ struct ChatScrollView: View {
         HStack {
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
+                // Display images above message
+                if let images = msg.images, !images.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 4) {
+                            ForEach(images, id: \.id) { imgData in
+                                if let base64String = imgData.base64,
+                                   let data = Data(base64Encoded: base64String),
+                                   let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 70, height: 70)
+                                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                                }
+                            }
+                        }
+                        .padding(.bottom, 4)
+                    }
+                    .frame(maxWidth: UIScreen.main.bounds.width * 0.8)
+                }
+                
                 Text(msg.content)
                     .font(.custom("PressStart2P-Regular", size: 9))
                     .padding(12)
@@ -146,6 +178,16 @@ struct ChatScrollView: View {
                         vm.messageInput = msg.content
                         vm.editingMessageId = msg.id
                         vm.isEditingMode = true
+                        // Load existing images for editing
+                        if let images = msg.images {
+                            vm.selectedImages = images.compactMap { imgData in
+                                if let base64String = imgData.base64,
+                                   let data = Data(base64Encoded: base64String) {
+                                    return UIImage(data: data)
+                                }
+                                return nil
+                            }
+                        }
                     }
                     Button("Delete", role: .destructive) {
                         vm.deleteMessage(conversationId:msg.conversationId , messageId: msg.id, userId: userId)
@@ -163,42 +205,92 @@ struct ChatScrollView: View {
     @ViewBuilder
     private func aiBubble(_ msg: Message) -> some View {
         HStack {
-            Text(msg.content)
-                .font(.custom("PressStart2P-Regular", size: 9))
-                .padding(12)
-                .background(
-                    Image("container")
-                        .resizable()
-                        .scaledToFill()
-                        .clipped()
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .frame(maxWidth: UIScreen.main.bounds.width * 0.8, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(msg.content)
+                    .font(.custom("PressStart2P-Regular", size: 9))
+                    .padding(12)
+                    .background(
+                        Image("container")
+                            .resizable()
+                            .scaledToFill()
+                            .clipped()
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(maxWidth: UIScreen.main.bounds.width * 0.8, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer()
         }
         .padding(.horizontal, 8)
     }
 }
 
-// MARK: - InputBar
+
 struct InputBar: View {
     @EnvironmentObject var viewModel: ConversationViewModel
     let userId: String
+    @State private var showImagePicker = false
+    @State private var selectedImageItems: [PhotosPickerItem] = []
 
     var body: some View {
-        ZStack {
-            Image("container")
-                .resizable()
-                .scaledToFill()
-                .frame(height: 55)
-                .clipped()
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                )
+        VStack(spacing: 8) {
+            // Image preview section (shown when images are selected)
+            if !viewModel.selectedImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(viewModel.selectedImages.indices, id: \.self) { idx in
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: viewModel.selectedImages[idx])
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 70, height: 70)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
+                                // Remove image button
+                                Button(action: {
+                                    viewModel.selectedImages.remove(at: idx)
+                                }) {
+                                    Image("x_icon")
+                                        .resizable()
+                                        .frame(width: 16, height: 16)
+                                        .foregroundColor(.red)
+                                        .padding(4)
+                                        .background(Color.white)
+                                        .clipShape(Circle())
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            // Input controls container
             HStack(spacing: 12) {
+                // Add image button
+                PhotosPicker(selection: $selectedImageItems, matching: .images) {
+                    Image("add_image_button")
+                        .resizable()
+                        .frame(width: 28, height: 28)
+                }
+                .onChange(of: selectedImageItems) { newItems in
+                    Task {
+                        var loadedImages: [UIImage] = []
+                        for item in newItems {
+                            if let data = try? await item.loadTransferable(type: Data.self),
+                               let uiImage = UIImage(data: data) {
+                                loadedImages.append(uiImage)
+                            }
+                        }
+                        await MainActor.run {
+                            self.viewModel.selectedImages.append(contentsOf: loadedImages)
+                            self.selectedImageItems.removeAll()
+                        }
+                    }
+                }
+
                 TextField("Type your message…", text: $viewModel.messageInput)
                     .font(.custom("PressStart2P-Regular", size: 12))
                     .padding(.vertical, 10)
@@ -210,7 +302,6 @@ struct InputBar: View {
                     .foregroundColor(.black)
 
                 Button(action: {
-                    
                     viewModel.sendOrEditMessage(userId: userId)
                 }) {
                     Image("send")
@@ -218,15 +309,21 @@ struct InputBar: View {
                         .frame(width: 32, height: 32)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                Image("container")
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-        .frame(height: 65)
-        .padding(.horizontal)
-        .padding(.bottom, 40)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
         .zIndex(3)
     }
 }
-
 // MARK: - Drawer Content
 struct DrawerContent: View {
     @ObservedObject var vm: ConversationViewModel
@@ -284,8 +381,6 @@ struct DrawerContent: View {
         .zIndex(2) // ensure drawer is tappable above overlay
     }
 }
-
-
 
 struct ConversationRow: View {
     let conv: Conversation

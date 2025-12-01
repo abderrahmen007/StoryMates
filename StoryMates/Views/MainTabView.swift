@@ -44,11 +44,19 @@ struct MainTabView: View {
             }
             
             NavigationView {
-                AIChatView()
+                ChatView(userId: "default_user")
             }
             .navigationViewStyle(.stack)
             .tabItem {
                 Label("AI Chat", systemImage: "message.fill")
+            }
+            
+            NavigationView {
+                ImageAnalysisView(onBack: {})
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("Analysis", systemImage: "photo.badge.checkmark.fill")
             }
             
             NavigationView {

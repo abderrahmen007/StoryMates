@@ -1,3 +1,4 @@
+
 //
 //  ConversationViewModel.swift
 //  StoryMates
@@ -8,6 +9,7 @@
 import Combine
 import Foundation
 import SwiftUI
+import UIKit
 
 @MainActor
 final class ConversationViewModel: ObservableObject {
@@ -22,6 +24,11 @@ final class ConversationViewModel: ObservableObject {
     @Published var newConversationTitleInput   = ""
     @Published var isEditingMode: Bool = false
     @Published var editingMessageId: String? = nil
+    
+    // Image handling properties
+    @Published var selectedImages: [UIImage] = []
+    @Published var showImagePicker = false
+    
     private let repo = AiConversationRepository.shared
     
     // MARK: - Logging util
@@ -29,7 +36,18 @@ final class ConversationViewModel: ObservableObject {
         print("🟩 [ViewModel] \(msg)")
     }
     
-    
+    // MARK: - Image handling
+    func convertImagesToImageData(images: [UIImage]) -> [ImageData] {
+        return images.compactMap { image in
+            guard let data = image.jpegData(compressionQuality: 0.8) else { return nil }
+            let base64String = data.base64EncodedString()
+            return ImageData(
+                base64: base64String,
+                mimeType: "image/jpeg",
+                fileName: "image_\(UUID().uuidString).jpg"
+            )
+        }
+    }
     
     // ===============================================================
     // MARK: - Load conversations
@@ -119,6 +137,78 @@ final class ConversationViewModel: ObservableObject {
     // MARK: - Send Message
     // ===============================================================
     
+    func sendMessageWithImages(userId: String) {
+        log("📌 sendMessageWithImages() called")
+        
+        guard let conv = selectedConversation else {
+            log("❌ sendMessageWithImages(): No selected conversation")
+            return
+        }
+        
+        let content = messageInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        log("✏️ Message input: '\(content)'")
+        
+        if content.isEmpty && selectedImages.isEmpty {
+            log("❌ sendMessageWithImages(): Message and images are empty")
+            return
+        }
+        
+        // Convert images to ImageData
+        let imageDataList = convertImagesToImageData(images: selectedImages)
+        
+        // Temporary UI message
+        let temp = Message(
+            id: "pending-\(UUID().uuidString)",
+            conversationId: conv.id,
+            sender: "user",
+            content: content,
+            timestamp: String(Date().timeIntervalSince1970),
+            images: imageDataList,
+            status: nil,
+            createdAt: nil,
+            updatedAt: nil
+        )
+        
+        log("📌 Appending temporary message id=\(temp.id) with \(imageDataList.count) images")
+        messages.append(temp)
+        messageInput = ""
+        selectedImages.removeAll()
+        
+        Task {
+            do {
+                guard let token = AuthManager.shared.accessToken else {
+                    log("❌ sendMessageWithImages(): Missing token")
+                    return
+                }
+                
+                log("➡️ Sending message with images to server ...")
+                
+                let real = try await repo.createMessage(
+                    conversationId: conv.id,
+                    dto: CreateMessageDto(userId: userId, content: content, images: imageDataList),
+                    token: token
+                )
+                
+                log("✅ Server returned real message id=\(real.id)")
+                
+                // Replace temporary message
+                if let idx = messages.firstIndex(where: { $0.id == temp.id }) {
+                    messages[idx] = real
+                    log("🔄 Replaced temporary message with real one")
+                }
+                
+                loadMessages(conversationId: conv.id, userId: userId)
+                
+            } catch {
+                log("❌ sendMessageWithImages() failed: \(error.localizedDescription)")
+                
+                // Remove temp msg
+                messages.removeAll { $0.id == temp.id }
+                self.error = error.localizedDescription
+            }
+        }
+    }
+    
     func sendMessage(userId: String) {
         log("📌 sendMessage() called")
         
@@ -141,7 +231,11 @@ final class ConversationViewModel: ObservableObject {
             conversationId: conv.id,
             sender: "user",
             content: content,
-            timestamp: String(Date().timeIntervalSince1970)
+            timestamp: String(Date().timeIntervalSince1970),
+            images: nil,
+            status: nil,
+            createdAt: nil,
+            updatedAt: nil
         )
         
         log("📌 Appending temporary message id=\(temp.id)")
@@ -189,8 +283,8 @@ final class ConversationViewModel: ObservableObject {
         let content = messageInput.trimmingCharacters(in: .whitespacesAndNewlines)
         log("📌 sendOrEditMessage() called → content: '\(content)'")
         
-        guard !content.isEmpty else {
-            log("❌ Message is empty")
+        guard !content.isEmpty || !selectedImages.isEmpty else {
+            log("❌ Message and images are empty")
             return
         }
         
@@ -209,9 +303,13 @@ final class ConversationViewModel: ObservableObject {
                         return
                     }
                     
+                    // Convert current selected images to ImageData
+                    let imageDataList = convertImagesToImageData(images: selectedImages)
+                    
+                    let dto = EditMessageDto(content: content, images: imageDataList.isEmpty ? nil : imageDataList)
                     let updated = try await repo.editMessage(
                         messageId: msgId,
-                        newText: content,
+                        dto: dto,
                         token: token
                     )
                     
@@ -224,6 +322,10 @@ final class ConversationViewModel: ObservableObject {
                     editingMessageId = nil
                     isEditingMode = false
                     messageInput = ""
+                    selectedImages.removeAll()
+                    
+                    // Reload messages to get fresh list from server
+                    loadMessages(conversationId: conv.id, userId: userId)
                     
                 } catch {
                     log("❌ editMessage() failed: \(error.localizedDescription)")
@@ -235,16 +337,26 @@ final class ConversationViewModel: ObservableObject {
             // ===== New message mode =====
             log("✏️ Sending new message")
             
+            // Convert images to ImageData
+            let imageDataList = convertImagesToImageData(images: selectedImages)
+            
+            // Temporary UI message
             let temp = Message(
                 id: "pending-\(UUID().uuidString)",
                 conversationId: conv.id,
                 sender: "user",
                 content: content,
-                timestamp: String(Date().timeIntervalSince1970)
+                timestamp: String(Date().timeIntervalSince1970),
+                images: imageDataList.isEmpty ? nil : imageDataList,
+                status: nil,
+                createdAt: nil,
+                updatedAt: nil
             )
             
+            log("📌 Appending temporary message id=\(temp.id) with \(imageDataList.count) images")
             messages.append(temp)
             messageInput = ""
+            selectedImages.removeAll()
             
             Task {
                 do {
@@ -255,7 +367,7 @@ final class ConversationViewModel: ObservableObject {
                     
                     let real = try await repo.createMessage(
                         conversationId: conv.id,
-                        dto: CreateMessageDto(userId: userId, content: content),
+                        dto: CreateMessageDto(userId: userId, content: content, images: imageDataList.isEmpty ? nil : imageDataList),
                         token: token
                     )
                     
@@ -325,9 +437,10 @@ final class ConversationViewModel: ObservableObject {
                 }
                 
                 log("➡️ Calling repo.editMessage() ...")
+                let dto = EditMessageDto(content: newText, images: nil)
                 let updated = try await repo.editMessage(
                     messageId: messageId,
-                    newText: newText,
+                    dto: dto,
                     token: token
                 )
                 
@@ -343,8 +456,39 @@ final class ConversationViewModel: ObservableObject {
         }
     }
     
-    
-    
+    func editMessageWithImages(messageId: String, newText: String, images: [UIImage], userId: String) {
+        log("📌 editMessageWithImages() → msgId=\(messageId), newText='\(newText)', images=\(images.count)")
+        
+        Task {
+            do {
+                guard let token = AuthManager.shared.accessToken else {
+                    log("❌ editMessageWithImages(): Missing token")
+                    return
+                }
+                
+                // Convert images to ImageData
+                let imageDataList = convertImagesToImageData(images: images)
+                
+                let dto = EditMessageDto(content: newText, images: imageDataList)
+                
+                log("➡️ Calling repo.editMessage() with images ...")
+                let updated = try await repo.editMessage(
+                    messageId: messageId,
+                    dto: dto,
+                    token: token
+                )
+                
+                if let idx = messages.firstIndex(where: { $0.id == messageId }) {
+                    messages[idx] = updated
+                    log("✅ Message with images updated in UI")
+                }
+                
+            } catch {
+                log("❌ editMessageWithImages() error: \(error.localizedDescription)")
+                self.error = error.localizedDescription
+            }
+        }
+    }
     
     
     // ===============================================================
@@ -364,8 +508,10 @@ final class ConversationViewModel: ObservableObject {
                 log("➡️ Calling repo.deleteMessage() ...")
                 try await repo.deleteMessage(conversationId: conversationId, messageId: messageId, token: token)
                 
-                messages.removeAll { $0.id == messageId }
-                log("🗑️ Message removed from UI")
+                log("🗑️ Message deleted from server")
+                
+                // Reload messages to get fresh list from server
+                loadMessages(conversationId: conversationId, userId: userId)
                 
             } catch {
                 log("❌ deleteMessage() error: \(error.localizedDescription)")
