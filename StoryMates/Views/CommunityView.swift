@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-import SwiftUI
-
 struct CommunityView: View {
     @StateObject private var viewModel = PostViewModel()
     @State private var showCreateSheet = false

@@ -32,13 +32,15 @@ class AuthManager: ObservableObject {
         return UserDefaults.standard.string(forKey: refreshTokenKey)
     }
     
-    func saveTokens(userId: String, userName: String, accessToken: String, refreshToken: String) {
+    func saveTokens(userId: String, userName: String? = nil, accessToken: String, refreshToken: String) {
         UserDefaults.standard.set(accessToken, forKey: accessTokenKey)
         UserDefaults.standard.set(refreshToken, forKey: refreshTokenKey)
         UserDefaults.standard.set(userId, forKey: userIdKey)
-        UserDefaults.standard.set(userName, forKey: userNameKey)
+        if let userName = userName {
+            UserDefaults.standard.set(userName, forKey: userNameKey)
+            self.userName = userName
+        }
         self.userId = userId
-        self.userName = userName
         self.isAuthenticated = true
     }
     

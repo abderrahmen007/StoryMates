@@ -4,6 +4,8 @@ struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var themeManager: ThemeManager
 
+    @ObservedObject private var authManager = AuthManager.shared
+    
     init() {
         // Customize Tab Bar appearance with pixelated theme
         let appearance = UITabBarAppearance()
@@ -386,6 +388,52 @@ struct InviteResponseSheet: View {
             await MainActor.run {
                 dismiss()
                 onDismiss()
+            NavigationView {
+                MyCollectionView()
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("Collection", systemImage: "square.grid.2x2.fill")
+            }
+            
+            NavigationView {
+                ProjectsMainScreen()
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("Projects", systemImage: "folder.fill")
+            }
+            
+            NavigationView {
+                ChatView(userId: authManager.userId ?? "default_user")
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("AI Chat", systemImage: "message.fill")
+            }
+            
+            NavigationView {
+                ImageAnalysisView(onBack: {})
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("Analysis", systemImage: "photo.badge.checkmark.fill")
+            }
+            
+            NavigationView {
+                CommunityHubView()
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("Community", systemImage: "person.3.fill")
+            }
+            
+            NavigationView {
+                ProfileView()
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("Profile", systemImage: "person.fill")
             }
         }
     }

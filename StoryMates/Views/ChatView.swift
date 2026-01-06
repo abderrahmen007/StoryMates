@@ -98,11 +98,11 @@ struct TopBar: View {
             Spacer()
             Text(title)
                 .font(.custom("PressStart2P-Regular", size: 18))
-                .foregroundColor(.white)
+                .foregroundColor(.black)
             Spacer()
         }
         .padding(12)
-        .background(Color(red: 0.16, green: 0.16, blue: 0.16))
+        .background(Color.themeBeige)
     }
 }
 
@@ -163,13 +163,7 @@ struct ChatScrollView: View {
                 Text(msg.content)
                     .font(.custom("PressStart2P-Regular", size: 9))
                     .padding(12)
-                    .background(
-                        Image("container")
-                            .resizable()
-                            .scaledToFill()
-                            .clipped()
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(PixelBackground(fillColor: .white))
                     .frame(maxWidth: UIScreen.main.bounds.width * 0.8, alignment: .trailing)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -190,7 +184,9 @@ struct ChatScrollView: View {
                         }
                     }
                     Button("Delete", role: .destructive) {
-                        vm.deleteMessage(conversationId:msg.conversationId , messageId: msg.id, userId: userId)
+                        Task {
+                            await vm.deleteMessage(conversationId:msg.conversationId , messageId: msg.id, userId: userId)
+                        }
                     }
                 } label: {
                     Image("drop_down_icon")
@@ -209,13 +205,7 @@ struct ChatScrollView: View {
                 Text(msg.content)
                     .font(.custom("PressStart2P-Regular", size: 9))
                     .padding(12)
-                    .background(
-                        Image("container")
-                            .resizable()
-                            .scaledToFill()
-                            .clipped()
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(PixelBackground(fillColor: .white))
                     .frame(maxWidth: UIScreen.main.bounds.width * 0.8, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -311,13 +301,7 @@ struct InputBar: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(
-                Image("container")
-                    .resizable()
-                    .scaledToFill()
-                    .clipped()
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .background(PixelBackground(fillColor: .white))
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
@@ -341,7 +325,9 @@ struct DrawerContent: View {
                     Button(action: onClose) {
                         Image("x_icon")
                             .resizable()
+                            .renderingMode(.template) // Make template
                             .frame(width: 28, height: 28)
+                            .foregroundColor(.black) // Set to black
                     }
                 }
                 .padding(.bottom, 12)
@@ -359,30 +345,35 @@ struct DrawerContent: View {
                     }) {
                         Image("icon_plus")
                             .resizable()
+                            .renderingMode(.template) // Make template
                             .frame(width: 22, height: 22)
+                            .foregroundColor(.black) // Set to black
                     }
                 }
                 .padding(.vertical, 8)
+                .padding(.leading, 12)
 
                 ScrollView {
                     VStack(spacing: 8) {
                         ForEach(vm.conversations) { conv in
-                            AIChatConversationRow(conv: conv, vm: vm, userId: userId, onSelect: {
+                            ConversationRow(conv: conv, vm: vm, userId: userId, onSelect: {
                                 vm.selectConversation(conv, userId: userId)
                                 onClose()
                             })
                         }
                     }
+                    .padding(.leading, 12)
                 }
             }
             .frame(width: 260)
             .padding(16)
+            .padding(.trailing, 10) // Extra padding for buttons
             .background(Color(red: 254/255, green: 238/255, blue: 176/255))
         .zIndex(2) // ensure drawer is tappable above overlay
     }
 }
 
-struct AIChatConversationRow: View {
+struct ConversationRow: View {
     let conv: Conversation
     @ObservedObject var vm: ConversationViewModel
     let userId: String
@@ -431,7 +422,9 @@ struct AIChatConversationRow: View {
                 }) {
                     Image("update_ic")
                         .resizable()
-                        .frame(width: 24, height: 24).foregroundColor(.white)
+                        .renderingMode(.template) // Make template
+                        .frame(width: 24, height: 24)
+                        .foregroundColor(.black) // Set to black
                 }
 
                 Button(action: {
@@ -441,18 +434,13 @@ struct AIChatConversationRow: View {
                 }) {
                     Image("delete_ic")
                         .resizable()
+                        .renderingMode(.template)
                         .frame(width: 24, height: 24)
                         .foregroundColor(.red)
                 }
             }
         }
         .padding(8)
-        .background(
-            Image("container")
-                .resizable()
-                .scaledToFill()
-                .clipped()
-        )
-        .cornerRadius(8)
+        .background(PixelBackground(fillColor: .white))
     }
 }
