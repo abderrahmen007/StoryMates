@@ -14,7 +14,7 @@ struct TokenResponse: Codable {
 
 struct AuthResponse: Codable {
     let userId: String
-    let userName: String
+    let userName: String?
     let token: TokenResponse
 }
 

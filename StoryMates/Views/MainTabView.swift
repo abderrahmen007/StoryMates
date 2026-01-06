@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @ObservedObject private var authManager = AuthManager.shared
+    
     init() {
         // Customize Tab Bar appearance with pixelated theme
         let appearance = UITabBarAppearance()
@@ -44,7 +46,15 @@ struct MainTabView: View {
             }
             
             NavigationView {
-                ChatView(userId: "default_user")
+                ProjectsMainScreen()
+            }
+            .navigationViewStyle(.stack)
+            .tabItem {
+                Label("Projects", systemImage: "folder.fill")
+            }
+            
+            NavigationView {
+                ChatView(userId: authManager.userId ?? "default_user")
             }
             .navigationViewStyle(.stack)
             .tabItem {

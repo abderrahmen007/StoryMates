@@ -392,32 +392,30 @@ final class ConversationViewModel: ObservableObject {
     // MARK: - New Conversation
     // ===============================================================
     
-    func createNewConversation(title: String = "New Conversation", userId: String) {
+    func createNewConversation(title: String = "New Conversation", userId: String) async {
         log("📌 createNewConversation() → title='\(title)', userId=\(userId)")
         
-        Task {
-            do {
-                guard let token = AuthManager.shared.accessToken else {
-                    log("❌ createNewConversation(): Missing token")
-                    return
-                }
-                
-                let dto = CreateConversationDto(title: title, userId: userId)
-                log("➡️ Calling repo.createConversation() ...")
-                
-                let newConv = try await repo.createConversation(dto: dto, token: token)
-                log("✅ Created new conversation id=\(newConv.id)")
-                
-                conversations.append(newConv)
-                selectedConversation = newConv
-                
-                isAddingNewConversation = false
-                
-            } catch {
-                log("❌ createNewConversation() error: \(error.localizedDescription)")
-                self.error = error.localizedDescription
-                isAddingNewConversation = false
+        do {
+            guard let token = AuthManager.shared.accessToken else {
+                log("❌ createNewConversation(): Missing token")
+                return
             }
+            
+            let dto = CreateConversationDto(title: title, userId: userId)
+            log("➡️ Calling repo.createConversation() ...")
+            
+            let newConv = try await repo.createConversation(dto: dto, token: token)
+            log("✅ Created new conversation id=\(newConv.id)")
+            
+            conversations.append(newConv)
+            selectedConversation = newConv
+            
+            isAddingNewConversation = false
+            
+        } catch {
+            log("❌ createNewConversation() error: \(error.localizedDescription)")
+            self.error = error.localizedDescription
+            isAddingNewConversation = false
         }
     }
     
@@ -495,28 +493,26 @@ final class ConversationViewModel: ObservableObject {
     // MARK: - Delete Message
     // ===============================================================
     
-    func deleteMessage(conversationId:String , messageId: String, userId: String) {
+    func deleteMessage(conversationId:String , messageId: String, userId: String) async {
         log("📌 deleteMessage() → msgId=\(messageId)")
         
-        Task {
-            do {
-                guard let token = AuthManager.shared.accessToken else {
-                    log("❌ deleteMessage(): Missing token")
-                    return
-                }
-                
-                log("➡️ Calling repo.deleteMessage() ...")
-                try await repo.deleteMessage(conversationId: conversationId, messageId: messageId, token: token)
-                
-                log("🗑️ Message deleted from server")
-                
-                // Reload messages to get fresh list from server
-                loadMessages(conversationId: conversationId, userId: userId)
-                
-            } catch {
-                log("❌ deleteMessage() error: \(error.localizedDescription)")
-                self.error = error.localizedDescription
+        do {
+            guard let token = AuthManager.shared.accessToken else {
+                log("❌ deleteMessage(): Missing token")
+                return
             }
+            
+            log("➡️ Calling repo.deleteMessage() ...")
+            try await repo.deleteMessage(conversationId: conversationId, messageId: messageId, token: token)
+            
+            log("🗑️ Message deleted from server")
+            
+            // Reload messages to get fresh list from server
+            loadMessages(conversationId: conversationId, userId: userId)
+            
+        } catch {
+            log("❌ deleteMessage() error: \(error.localizedDescription)")
+            self.error = error.localizedDescription
         }
     }
     
@@ -525,37 +521,35 @@ final class ConversationViewModel: ObservableObject {
     // MARK: - Edit Conversation Title
     // ===============================================================
     
-    func editConversationTitle(conversationId: String, newTitle: String) {
+    func editConversationTitle(conversationId: String, newTitle: String) async {
         log("📌 editConversationTitle() → convId=\(conversationId), newTitle='\(newTitle)'")
         
-        Task {
-            do {
-                guard let token = AuthManager.shared.accessToken else {
-                    log("❌ editConversationTitle(): Missing token")
-                    return
-                }
-                
-                log("➡️ Calling repo.editConversation() ...")
-                let updated = try await repo.editConversation(
-                    conversationId: conversationId,
-                    title: newTitle,
-                    token: token
-                )
-                
-                if let idx = conversations.firstIndex(where: { $0.id == conversationId }) {
-                    conversations[idx] = updated
-                    log("🔄 Conversation title updated in list")
-                }
-                
-                if selectedConversation?.id == conversationId {
-                    selectedConversation = updated
-                    log("📌 Updated selectedConversation title")
-                }
-                
-            } catch {
-                log("❌ editConversationTitle() error: \(error.localizedDescription)")
-                self.error = error.localizedDescription
+        do {
+            guard let token = AuthManager.shared.accessToken else {
+                log("❌ editConversationTitle(): Missing token")
+                return
             }
+            
+            log("➡️ Calling repo.editConversation() ...")
+            let updated = try await repo.editConversation(
+                conversationId: conversationId,
+                title: newTitle,
+                token: token
+            )
+            
+            if let idx = conversations.firstIndex(where: { $0.id == conversationId }) {
+                conversations[idx] = updated
+                log("🔄 Conversation title updated in list")
+            }
+            
+            if selectedConversation?.id == conversationId {
+                selectedConversation = updated
+                log("📌 Updated selectedConversation title")
+            }
+            
+        } catch {
+            log("❌ editConversationTitle() error: \(error.localizedDescription)")
+            self.error = error.localizedDescription
         }
     }
     
@@ -564,38 +558,36 @@ final class ConversationViewModel: ObservableObject {
     // MARK: - Delete Conversation
     // ===============================================================
     
-    func deleteConversation(conversationId: String) {
+    func deleteConversation(conversationId: String) async {
         log("📌 deleteConversation() → convId=\(conversationId)")
         
-        Task {
-            do {
-                guard let token = AuthManager.shared.accessToken else {
-                    log("❌ deleteConversation(): Missing token")
-                    return
-                }
-                
-                log("➡️ Calling repo.deleteConversation() ...")
-                try await repo.deleteConversation(conversationId: conversationId, token: token)
-                
-                conversations.removeAll { $0.id == conversationId }
-                log("🗑️ Conversation removed from UI")
-                
-                if selectedConversation?.id == conversationId {
-                    selectedConversation = conversations.max(by: { $0.id < $1.id })
-                    
-                    if let c = selectedConversation {
-                        log("📌 New selectedConversation: \(c.id)")
-                        loadMessages(conversationId: c.id, userId: c.userId)
-                    } else {
-                        log("📌 No conversations left → clearing message list")
-                        messages = []
-                    }
-                }
-                
-            } catch {
-                log("❌ deleteConversation() error: \(error.localizedDescription)")
-                self.error = error.localizedDescription
+        do {
+            guard let token = AuthManager.shared.accessToken else {
+                log("❌ deleteConversation(): Missing token")
+                return
             }
+            
+            log("➡️ Calling repo.deleteConversation() ...")
+            try await repo.deleteConversation(conversationId: conversationId, token: token)
+            
+            conversations.removeAll { $0.id == conversationId }
+            log("🗑️ Conversation removed from UI")
+            
+            if selectedConversation?.id == conversationId {
+                selectedConversation = conversations.max(by: { $0.id < $1.id })
+                
+                if let c = selectedConversation {
+                    log("📌 New selectedConversation: \(c.id)")
+                    loadMessages(conversationId: c.id, userId: c.userId)
+                } else {
+                    log("📌 No conversations left → clearing message list")
+                    messages = []
+                }
+            }
+            
+        } catch {
+            log("❌ deleteConversation() error: \(error.localizedDescription)")
+            self.error = error.localizedDescription
         }
     }
 }
