@@ -70,7 +70,35 @@ struct HomeView: View {
                             }
                             .padding(.horizontal, 20)
                         } else {
+                            // AI Recommendations Section
+                            if !viewModel.aiRecommendations.isEmpty {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Image(systemName: "sparkles")
+                                            .foregroundColor(.yellow)
+                                        Text("AI Picks for You")
+                                            .font(.custom("PressStart2P-Regular", size: 16))
+                                            .foregroundColor(themeManager.isDarkMode ? .white : .white)
+                                            .shadow(color: .black, radius: 2, x: 1, y: 1)
+                                    }
+                                    .padding(.horizontal, 20)
+                                    
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 15) {
+                                            ForEach(viewModel.aiRecommendations) { rec in
+                                                NavigationLink(destination: GameDetailsView(gameId: rec.game.id)) {
+                                                    AIRecommendationCard(recommendation: rec)
+                                                }
+                                            }
+                                        }
+                                        .padding(.horizontal, 20)
+                                    }
+                                }
+                                .padding(.top, 10)
+                            }
+                            
                             // Sections
+
                             ForEach(viewModel.sections, id: \.self) { section in
                                 VStack(alignment: .leading, spacing: 10) {
                                     Text(section)
@@ -110,6 +138,29 @@ struct HomeView: View {
         .task {
             await viewModel.loadData()
         }
+        .overlay(
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    NavigationLink(destination: MyCollectionView()) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.black)
+                            .frame(width: 56, height: 56)
+                            .background(Color.yellow) // PrimaryGold equivalent
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.3), radius: 4, x: 2, y: 2)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white, lineWidth: 2)
+                            )
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 90)
+                }
+            }
+        )
     }
 }
 
@@ -118,12 +169,12 @@ struct GamePosterView: View {
     
     var body: some View {
         VStack {
-            // Game Poster with caching
+            // Game Poster with caching, smaller size and card-like styling
             CachedAsyncImage(url: game.coverUrl) { image in
                 image
                     .resizable()
                     .scaledToFill()
-                    .aspectRatio(0.75, contentMode: .fit) // 3:4 aspect ratio
+                    .frame(width: 100, height: 150) // Adjust size here for card-like image
                     .cornerRadius(10)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
@@ -133,7 +184,7 @@ struct GamePosterView: View {
                 ZStack {
                     Rectangle()
                         .fill(Color.gray.opacity(0.5))
-                        .aspectRatio(0.75, contentMode: .fit)
+                        .frame(width: 100, height: 150) // Match the size of the image
                         .cornerRadius(10)
                     ProgressView()
                 }
@@ -144,10 +195,13 @@ struct GamePosterView: View {
                 .foregroundColor(.white)
                 .shadow(color: .black, radius: 1, x: 1, y: 1)
                 .lineLimit(1)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: 100) // Constrain text width for card-like effect
         }
+        .frame(width: 100) // Constrain the card size
+        .padding(5)
     }
 }
+
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {

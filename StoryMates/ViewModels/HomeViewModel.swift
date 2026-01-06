@@ -5,6 +5,7 @@ import Combine
 class HomeViewModel: ObservableObject {
     @Published var searchText = ""
     @Published var popularGames: [Game] = []
+    @Published var aiRecommendations: [AIRecommendation] = []
     @Published var genreGames: [String: [Game]] = [:]
     @Published var searchResults: [Game] = []
     @Published var isSearching = false
@@ -15,12 +16,16 @@ class HomeViewModel: ObservableObject {
     let sections = ["Popular Games", "Action", "Adventure", "RPG", "Strategy", "Puzzle"]
     
     func loadData() async {
-        isLoading = true
+        DispatchQueue.main.async {
+            self.isLoading = true
+        }
         
         // Try to load from cache first
         if let cachedPopular = cacheManager.getCachedPopularGames() {
             print("📦 Loaded \(cachedPopular.count) popular games from cache")
-            self.popularGames = cachedPopular
+            DispatchQueue.main.async {
+                self.popularGames = cachedPopular
+            }
         }
         
         // Load genre games from cache
@@ -28,16 +33,21 @@ class HomeViewModel: ObservableObject {
         for section in sections where section != "Popular Games" {
             if let cachedGames = cacheManager.getCachedGenreGames(for: section) {
                 print("📦 Loaded \(cachedGames.count) \(section) games from cache")
-                self.genreGames[section] = cachedGames
+                DispatchQueue.main.async {
+                    self.genreGames[section] = cachedGames
+                }
             } else {
                 allGenresCached = false
             }
         }
         
-        // If all data is cached, we're done
+        // If all data is cached, we're done with games, but still need recommendations
         if popularGames.count > 0 && allGenresCached {
             print("✅ All games loaded from cache")
-            isLoading = false
+            await fetchRecommendations()
+            DispatchQueue.main.async {
+                self.isLoading = false
+            }
             return
         }
         
@@ -47,8 +57,10 @@ class HomeViewModel: ObservableObject {
             // Fetch popular games if not cached
             if popularGames.isEmpty {
                 let popular = try await networkManager.fetchPopularGames()
-                self.popularGames = popular
-                cacheManager.cachePopularGames(popular)
+                DispatchQueue.main.async {
+                    self.popularGames = popular
+                    self.cacheManager.cachePopularGames(popular)
+                }
                 print("💾 Cached \(popular.count) popular games")
             }
             
@@ -56,16 +68,37 @@ class HomeViewModel: ObservableObject {
             for section in sections where section != "Popular Games" {
                 if genreGames[section] == nil {
                     let games = try await networkManager.fetchGamesByGenre(genre: section)
-                    self.genreGames[section] = games
-                    cacheManager.cacheGenreGames(games, for: section)
+                    DispatchQueue.main.async {
+                        self.genreGames[section] = games
+                        self.cacheManager.cacheGenreGames(games, for: section)
+                    }
                     print("💾 Cached \(games.count) \(section) games")
                 }
             }
+            
+            // Fetch AI recommendations
+            await fetchRecommendations()
         } catch {
             print("Error fetching games: \(error)")
         }
         
-        isLoading = false
+        DispatchQueue.main.async {
+            self.isLoading = false
+        }
+    }
+    
+    func fetchRecommendations() async {
+        guard let userId = AuthManager.shared.userId else { return }
+        print("🤖 Fetching AI recommendations for user: \(userId)")
+        do {
+            let recs = try await networkManager.getAIRecommendations(userId: userId)
+            DispatchQueue.main.async {
+                self.aiRecommendations = recs
+            }
+            print("✅ Loaded \(recs.count) AI recommendations")
+        } catch {
+            print("Error fetching recommendations: \(error)")
+        }
     }
     
     func performSearch() {
@@ -74,7 +107,9 @@ class HomeViewModel: ObservableObject {
         Task {
             do {
                 let results = try await networkManager.searchGames(query: searchText)
-                self.searchResults = results
+                DispatchQueue.main.async {
+                    self.searchResults = results
+                }
             } catch {
                 print("Error searching games: \(error)")
             }

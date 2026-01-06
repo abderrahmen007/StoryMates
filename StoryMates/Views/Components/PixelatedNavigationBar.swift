@@ -17,17 +17,12 @@ struct PixelatedNavigationBar: View {
                 Button(action: {
                     onBack?()
                 }) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrowtriangle.left.fill")
-                            .font(.system(size: 12))
-                        Text("Back")
-                            .font(.custom("PressStart2P-Regular", size: 10))
-                    }
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.9))
-                    .cornerRadius(8)
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.black)
+                        .padding(10)
+                        .background(Color.white.opacity(0.9))
+                        .clipShape(Circle())
                 }
             } else {
                 Spacer()

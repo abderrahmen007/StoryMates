@@ -178,26 +178,10 @@ code_sign_if_enabled() {
 if [[ "$CONFIGURATION" == "Debug" ]]; then
   install_framework "${BUILT_PRODUCTS_DIR}/Socket.IO-Client-Swift/SocketIO.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/Starscream/Starscream.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZIPFoundation/ZIPFoundation.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoPluginAdapter/ZegoPluginAdapter.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoPrebuiltLog/ZegoPrebuiltLog.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoUIKit/ZegoUIKit.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoUIKitPrebuiltCall/ZegoUIKitPrebuiltCall.framework"
-  install_framework "${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoExpressEngine/ZegoExpressEngine.framework"
-  install_framework "${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoUIKitReport/ZegoUIKitReport.framework"
-  install_framework "${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoUIKitReport/ZegoConnection.framework"
 fi
 if [[ "$CONFIGURATION" == "Release" ]]; then
   install_framework "${BUILT_PRODUCTS_DIR}/Socket.IO-Client-Swift/SocketIO.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/Starscream/Starscream.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZIPFoundation/ZIPFoundation.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoPluginAdapter/ZegoPluginAdapter.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoPrebuiltLog/ZegoPrebuiltLog.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoUIKit/ZegoUIKit.framework"
-  install_framework "${BUILT_PRODUCTS_DIR}/ZegoUIKitPrebuiltCall/ZegoUIKitPrebuiltCall.framework"
-  install_framework "${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoExpressEngine/ZegoExpressEngine.framework"
-  install_framework "${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoUIKitReport/ZegoUIKitReport.framework"
-  install_framework "${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoUIKitReport/ZegoConnection.framework"
 fi
 if [ "${COCOAPODS_PARALLEL_CODE_SIGN}" == "true" ]; then
   wait

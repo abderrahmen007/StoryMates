@@ -2,48 +2,19 @@ PODS:
   - Socket.IO-Client-Swift (16.1.1):
     - Starscream (~> 4.0.8)
   - Starscream (4.0.8)
-  - ZegoExpressEngine (3.22.0)
-  - ZegoPluginAdapter (2.6.0)
-  - ZegoPrebuiltLog (1.1.0):
-    - ZIPFoundation
-  - ZegoUIKit (2.15.0):
-    - ZegoExpressEngine (>= 3.17.0)
-    - ZegoPluginAdapter (>= 2.6.0)
-    - ZegoPrebuiltLog (>= 1.1.0)
-    - ZegoUIKitReport (>= 0.2.10)
-  - ZegoUIKitPrebuiltCall (2.16.0):
-    - ZegoPrebuiltLog (>= 1.1.0)
-    - ZegoUIKit (>= 2.15.0)
-  - ZegoUIKitReport (0.5.1)
-  - ZIPFoundation (0.9.20)
 
 DEPENDENCIES:
   - Socket.IO-Client-Swift (~> 16.1.0)
-  - ZegoUIKitPrebuiltCall
 
 SPEC REPOS:
   trunk:
     - Socket.IO-Client-Swift
     - Starscream
-    - ZegoExpressEngine
-    - ZegoPluginAdapter
-    - ZegoPrebuiltLog
-    - ZegoUIKit
-    - ZegoUIKitPrebuiltCall
-    - ZegoUIKitReport
-    - ZIPFoundation
 
 SPEC CHECKSUMS:
   Socket.IO-Client-Swift: 3614bea82ba005df1c2ff01154f4004993e05ad7
   Starscream: 19b5533ddb925208db698f0ac508a100b884a1b9
-  ZegoExpressEngine: c1b01551fc817e6fd32b3a877a9d15de6d93f68e
-  ZegoPluginAdapter: 4e2460436b28b33dacfc1668317c080c90201799
-  ZegoPrebuiltLog: d867b1da9d9cf23b8893e32ebf71feb386a3fb10
-  ZegoUIKit: d4f9a1c9ec6f51530df912e31820144c40c84236
-  ZegoUIKitPrebuiltCall: 8e3f3a0ee3b891f366aee64ffcd9e2e0fb4191eb
-  ZegoUIKitReport: 36f4bc9a02a4fdd5d1eda1bf665b42c54cbbfd89
-  ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: a72a622b8afd074e50b53b8a710edc1c6b248d3f
+PODFILE CHECKSUM: 00300e3fbfa8651e849f859f1de62a98452dcd22
 
 COCOAPODS: 1.16.2

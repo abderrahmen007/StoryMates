@@ -46,7 +46,7 @@ struct AnimatedThemeToggle: View {
                 sunOffset = 150
             }
         }
-        .onChange(of: themeManager.isDarkMode) { isDark in
+        .onChange(of: themeManager.isDarkMode) { oldValue, isDark in
             if isDark {
                 // Switch to Dark: Sun springs down, Moon falls in from top
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {

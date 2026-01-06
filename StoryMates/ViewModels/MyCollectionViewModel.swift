@@ -8,32 +8,28 @@ class MyCollectionViewModel: ObservableObject {
     
     private var networkManager = NetworkManager()
     
-    func loadCollection() {
+    func loadCollection() async {
         guard let userId = AuthManager.shared.userId else { return }
-        Task {
-            do {
-                let items = try await networkManager.getCollection(userId: userId)
-                self.collection = items
-                // Load details for games in collection
-                for item in items {
-                    if self.games[item.gameId] == nil {
-                        self.loadGameDetails(id: item.gameId)
-                    }
+        do {
+            let items = try await networkManager.getCollection(userId: userId)
+            self.collection = items
+            // Load details for games in collection
+            for item in items {
+                if self.games[item.gameId] == nil {
+                    await self.loadGameDetails(id: item.gameId)
                 }
-            } catch {
-                print("Error loading collection: \(error)")
             }
+        } catch {
+            print("Error loading collection: \(error)")
         }
     }
     
-    func loadGameDetails(id: Int) {
-        Task {
-            do {
-                let game = try await networkManager.getGameDetails(id: id)
-                self.games[id] = game
-            } catch {
-                print("Error loading game details: \(error)")
-            }
+    func loadGameDetails(id: Int) async {
+        do {
+            let game = try await networkManager.getGameDetails(id: id)
+            self.games[id] = game
+        } catch {
+            print("Error loading game details: \(error)")
         }
     }
 }

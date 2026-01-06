@@ -87,11 +87,12 @@ struct CollectionGameCard: View {
     
     var body: some View {
         VStack(spacing: 8) {
+            // Game Poster with caching, smaller size and card-like styling
             CachedAsyncImage(url: game.coverUrl) { image in
                 image
                     .resizable()
                     .scaledToFill()
-                    .aspectRatio(0.71, contentMode: .fit) // ~100/140 ratio
+                    .frame(width: 100, height: 140) // Adjust the size to make it smaller
                     .cornerRadius(10)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
@@ -101,7 +102,7 @@ struct CollectionGameCard: View {
                 ZStack {
                     Rectangle()
                         .fill(Color.gray.opacity(0.5))
-                        .aspectRatio(0.71, contentMode: .fit)
+                        .frame(width: 100, height: 140) // Match the size of the image
                         .cornerRadius(10)
                     ProgressView()
                 }
@@ -133,6 +134,8 @@ struct CollectionGameCard: View {
                     .font(.system(size: 16))
             }
         }
+        .frame(width: 120) // Set width to create a card-like effect
+        .padding(5)
     }
     
     private func statusEmoji(for status: String) -> String {

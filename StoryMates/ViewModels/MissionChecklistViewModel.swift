@@ -59,10 +59,19 @@ class MissionChecklistViewModel: ObservableObject {
     }
     
     func toggleMission(_ mission: Mission) {
-        guard let userId = AuthManager.shared.userId else { return }
+        print("🔘 [ToggleMission] Tapped mission #\(mission.number): \(mission.title)")
+        print("🔘 [ToggleMission] Current completion status: \(mission.isCompleted)")
+        
+        guard let userId = AuthManager.shared.userId else {
+            print("❌ [ToggleMission] No userId found")
+            return
+        }
+        
+        print("✅ [ToggleMission] UserId: \(userId)")
         
         Task {
             do {
+                print("📤 [ToggleMission] Sending toggle request to backend...")
                 let newProgress = try await networkManager.toggleMission(
                     userId: userId,
                     gameId: gameId,
@@ -70,19 +79,48 @@ class MissionChecklistViewModel: ObservableObject {
                     totalMissions: missions.count
                 )
                 
+                print("✅ [ToggleMission] Received new progress: \(newProgress.completedMissions.count)/\(newProgress.totalMissions)")
+                print("✅ [ToggleMission] Completed missions: \(newProgress.completedMissions)")
+                
                 progress = newProgress
                 updateMissionsWithProgress()
+                
+                print("✅ [ToggleMission] UI updated")
             } catch {
+                print("❌ [ToggleMission] Error: \(error.localizedDescription)")
                 errorMessage = "Failed to update mission: \(error.localizedDescription)"
             }
         }
     }
     
     private func updateMissionsWithProgress() {
-        guard let progress = progress else { return }
-        
-        for index in missions.indices {
-            missions[index].isCompleted = progress.completedMissions.contains(missions[index].number)
+        guard let progress = progress else {
+            print("⚠️ [UpdateMissions] No progress data available")
+            return
         }
+        
+        print("🔄 [UpdateMissions] Updating \(missions.count) missions with progress")
+        print("🔄 [UpdateMissions] Completed missions from backend: \(progress.completedMissions)")
+        
+        // Create a new array to trigger SwiftUI's change detection
+        var updatedMissions: [Mission] = []
+        
+        for mission in missions {
+            var updatedMission = mission
+            let wasCompleted = mission.isCompleted
+            let shouldBeCompleted = progress.completedMissions.contains(mission.number)
+            
+            updatedMission.isCompleted = shouldBeCompleted
+            updatedMissions.append(updatedMission)
+            
+            if wasCompleted != shouldBeCompleted {
+                print("🔄 [UpdateMissions] Mission #\(mission.number): \(wasCompleted ? "completed" : "incomplete") → \(shouldBeCompleted ? "completed" : "incomplete")")
+            }
+        }
+        
+        // Replace the entire array to trigger @Published update
+        missions = updatedMissions
+        
+        print("✅ [UpdateMissions] Update complete. Total completed: \(missions.filter { $0.isCompleted }.count)")
     }
 }

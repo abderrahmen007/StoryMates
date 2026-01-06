@@ -12,7 +12,7 @@ struct DarkThemeBackground: View {
                 .ignoresSafeArea()
             
             // Stars overlay with pulsing animation
-            Image("stars")
+           /* Image("stars")
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .ignoresSafeArea()
@@ -21,7 +21,7 @@ struct DarkThemeBackground: View {
                     withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                         opacity = 0.8
                     }
-                }
+                }*/
         }
     }
 }

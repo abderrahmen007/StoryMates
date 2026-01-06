@@ -13,30 +13,36 @@ struct StoryMatesApp: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var themeManager = ThemeManager.shared
+    @State private var showSplash = true
 
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if authManager.isAuthenticated {
-                    MainTabView()
-                        .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                        .environmentObject(themeManager)
-                        .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
-                        .onAppear {
-                            // Ensure SocketIO connects when main view appears
-                            SocketIOManager.shared.connectChat()
-                            SocketIOManager.shared.connectNotifications()
-                            if let userId = authManager.userId {
-                                SocketIOManager.shared.listenForCalls(userId: userId)
-                            }
-                        }
-                    
-                    CallOverlayView() // Global Call Overlay
+                if showSplash {
+                    SplashScreen()
+                        .transition(.opacity)
                 } else {
-                    LoginScreen()
-                        .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                        .environmentObject(themeManager)
-                        .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
+                    if authManager.isAuthenticated {
+                        MainTabView()
+                            .onAppear {
+                                if let userId = authManager.userId {
+                                    WebSocketService.shared.connect(userId: userId)
+                                }
+                            }
+                    } else {
+                        LoginScreen()
+                    }
+                }
+            }
+            .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            .environmentObject(themeManager)
+            .environmentObject(authManager)
+            .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation {
+                        showSplash = false
+                    }
                 }
             }
         }

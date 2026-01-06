@@ -1,11 +1,3 @@
 ${PODS_ROOT}/Target Support Files/Pods-StoryMates/Pods-StoryMates-frameworks.sh
 ${BUILT_PRODUCTS_DIR}/Socket.IO-Client-Swift/SocketIO.framework
 ${BUILT_PRODUCTS_DIR}/Starscream/Starscream.framework
-${BUILT_PRODUCTS_DIR}/ZIPFoundation/ZIPFoundation.framework
-${BUILT_PRODUCTS_DIR}/ZegoPluginAdapter/ZegoPluginAdapter.framework
-${BUILT_PRODUCTS_DIR}/ZegoPrebuiltLog/ZegoPrebuiltLog.framework
-${BUILT_PRODUCTS_DIR}/ZegoUIKit/ZegoUIKit.framework
-${BUILT_PRODUCTS_DIR}/ZegoUIKitPrebuiltCall/ZegoUIKitPrebuiltCall.framework
-${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoExpressEngine/ZegoExpressEngine.framework/ZegoExpressEngine
-${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoUIKitReport/ZegoUIKitReport.framework/ZegoUIKitReport
-${PODS_XCFRAMEWORKS_BUILD_DIR}/ZegoUIKitReport/ZegoConnection.framework/ZegoConnection

@@ -11,16 +11,21 @@ import SwiftUI
 struct RegisterScreen: View {
     @StateObject private var viewModel = RegisterViewModel()
     @Environment(\.dismiss) var dismiss
-    
+    @EnvironmentObject var themeManager: ThemeManager
+
     var body: some View {
         ZStack {
-            // Background with gradient and land images
-            Image("background_land") // Replace with your land image name
-                .resizable()
-                .scaledToFill()
-                .edgesIgnoringSafeArea(.all)
+            // Background
+            if themeManager.isDarkMode {
+                DarkThemeBackground()
+            } else {
+                Image("background_land")
+                    .resizable()
+                    .scaledToFill()
+                    .edgesIgnoringSafeArea(.all)
+            }
             
-            // Cloud animation that fits the screen
+           
             AnimatedClouds()
             
             VStack {

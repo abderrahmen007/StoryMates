@@ -1,4 +1,4 @@
-import SwiftUI
+/* import SwiftUI
 
 struct AIChatView: View {
     @EnvironmentObject var themeManager: ThemeManager
@@ -27,3 +27,4 @@ struct AIChatView: View {
         }
     }
 }
+*/

@@ -7,17 +7,19 @@ struct Game: Codable, Identifiable {
     let rating: Double?
     let cover: GameCover?
     let genres: [GameGenre]?
+    let first_release_date: Int? // Unix timestamp
     let description: String?
     let screenshots: [String]?
     let trailers: [String]?
+    let recommendationReason: String? // Only present in recommendations endpoint
     
     struct GameCover: Codable {
-        let id: Int
+        let id: Int?
         let url: String
     }
     
     struct GameGenre: Codable {
-        let id: Int
+        let id: Int?
         let name: String
     }
     
