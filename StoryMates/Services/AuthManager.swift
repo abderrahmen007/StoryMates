@@ -13,10 +13,12 @@ class AuthManager: ObservableObject {
     
     @Published var isAuthenticated = false
     @Published var userId: String?
+    @Published var userName: String?
     
     private let accessTokenKey = "accessToken"
     private let refreshTokenKey = "refreshToken"
     private let userIdKey = "userId"
+    private let userNameKey = "userName"
     
     private init() {
         loadAuthState()
@@ -30,11 +32,13 @@ class AuthManager: ObservableObject {
         return UserDefaults.standard.string(forKey: refreshTokenKey)
     }
     
-    func saveTokens(userId: String, accessToken: String, refreshToken: String) {
+    func saveTokens(userId: String, userName: String, accessToken: String, refreshToken: String) {
         UserDefaults.standard.set(accessToken, forKey: accessTokenKey)
         UserDefaults.standard.set(refreshToken, forKey: refreshTokenKey)
         UserDefaults.standard.set(userId, forKey: userIdKey)
+        UserDefaults.standard.set(userName, forKey: userNameKey)
         self.userId = userId
+        self.userName = userName
         self.isAuthenticated = true
     }
     
@@ -42,7 +46,9 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: accessTokenKey)
         UserDefaults.standard.removeObject(forKey: refreshTokenKey)
         UserDefaults.standard.removeObject(forKey: userIdKey)
+        UserDefaults.standard.removeObject(forKey: userNameKey)
         self.userId = nil
+        self.userName = nil
         self.isAuthenticated = false
     }
     
@@ -55,6 +61,7 @@ class AuthManager: ObservableObject {
         if let userId = UserDefaults.standard.string(forKey: userIdKey),
            let _ = UserDefaults.standard.string(forKey: accessTokenKey) {
             self.userId = userId
+            self.userName = UserDefaults.standard.string(forKey: userNameKey)
             self.isAuthenticated = true
         }
     }

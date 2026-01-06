@@ -1,0 +1,6 @@
+framework module ZegoPluginAdapter {
+  umbrella header "ZegoPluginAdapter-umbrella.h"
+
+  export *
+  module * { export * }
+}

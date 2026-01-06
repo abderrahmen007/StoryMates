@@ -367,7 +367,7 @@ struct DrawerContent: View {
                 ScrollView {
                     VStack(spacing: 8) {
                         ForEach(vm.conversations) { conv in
-                            ConversationRow(conv: conv, vm: vm, userId: userId, onSelect: {
+                            AIChatConversationRow(conv: conv, vm: vm, userId: userId, onSelect: {
                                 vm.selectConversation(conv, userId: userId)
                                 onClose()
                             })
@@ -382,7 +382,7 @@ struct DrawerContent: View {
     }
 }
 
-struct ConversationRow: View {
+struct AIChatConversationRow: View {
     let conv: Conversation
     @ObservedObject var vm: ConversationViewModel
     let userId: String

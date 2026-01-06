@@ -60,7 +60,7 @@ struct MainTabView: View {
             }
             
             NavigationView {
-                CommunityView()
+                CommunityHubView()
             }
             .navigationViewStyle(.stack)
             .tabItem {

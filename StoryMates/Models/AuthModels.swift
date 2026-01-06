@@ -13,7 +13,8 @@ struct TokenResponse: Codable {
 }
 
 struct AuthResponse: Codable {
-    let userId: String      // was optional; make it non-optional for successful login
+    let userId: String
+    let userName: String
     let token: TokenResponse
 }
 

@@ -1,0 +1,6 @@
+framework module ZegoUIKitPrebuiltCall {
+  umbrella header "ZegoUIKitPrebuiltCall-umbrella.h"
+
+  export *
+  module * { export * }
+}

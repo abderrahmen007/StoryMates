@@ -16,16 +16,28 @@ struct StoryMatesApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if authManager.isAuthenticated {
-                MainTabView()
-                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                    .environmentObject(themeManager)
-                    .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
-            } else {
-                LoginScreen()
-                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                    .environmentObject(themeManager)
-                    .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
+            ZStack {
+                if authManager.isAuthenticated {
+                    MainTabView()
+                        .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                        .environmentObject(themeManager)
+                        .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
+                        .onAppear {
+                            // Ensure SocketIO connects when main view appears
+                            SocketIOManager.shared.connectChat()
+                            SocketIOManager.shared.connectNotifications()
+                            if let userId = authManager.userId {
+                                SocketIOManager.shared.listenForCalls(userId: userId)
+                            }
+                        }
+                    
+                    CallOverlayView() // Global Call Overlay
+                } else {
+                    LoginScreen()
+                        .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                        .environmentObject(themeManager)
+                        .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
+                }
             }
         }
     }

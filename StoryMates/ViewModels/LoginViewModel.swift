@@ -30,6 +30,7 @@ class LoginViewModel: ObservableObject {
             let userId = authResponse.userId
             authManager.saveTokens(
                 userId: userId,
+                userName: authResponse.userName,
                 accessToken: authResponse.token.accessToken,
                 refreshToken: authResponse.token.refreshToken
             )

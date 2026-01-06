@@ -1,0 +1,6 @@
+framework module ZegoUIKit {
+  umbrella header "ZegoUIKit-umbrella.h"
+
+  export *
+  module * { export * }
+}
