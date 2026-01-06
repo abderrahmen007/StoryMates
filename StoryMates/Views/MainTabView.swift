@@ -242,6 +242,161 @@ struct InviteResponseSheet: View {
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
             }
+            .accentColor(.white)
+            
+            // Notification Banner - CLICKABLE
+            if showingNotification {
+                VStack {
+                    HStack {
+                        Image(systemName: getNotificationIcon())
+                            .foregroundColor(.black)
+                        VStack(alignment: .leading) {
+                            Text(getNotificationTitle())
+                                .font(.custom("PressStart2P-Regular", size: 12))
+                                .foregroundColor(.black)
+                            Text(notificationMessage)
+                                .font(.system(size: 14))
+                                .foregroundColor(.black)
+                        }
+                        Spacer()
+                        if notificationType == "GAME_INVITE" {
+                            Text("Tap →")
+                                .font(.system(size: 12))
+                                .foregroundColor(.black.opacity(0.6))
+                        }
+                    }
+                    .padding()
+                    .background(getNotificationColor())
+                    .cornerRadius(12)
+                    .shadow(radius: 5)
+                    .padding()
+                    .onTapGesture {
+                        if notificationType == "GAME_INVITE" && pendingNotification != nil {
+                            showInvitePopup = true
+                            withAnimation { showingNotification = false }
+                        } else {
+                            withAnimation { showingNotification = false }
+                        }
+                    }
+                }
+                .transition(.move(edge: .top))
+                .zIndex(1)
+            }
+        }
+        .sheet(isPresented: $showInvitePopup) {
+            if let notification = pendingNotification {
+                InviteResponseSheet(notification: notification) {
+                    pendingNotification = nil
+                }
+            }
+        }
+        .onReceive(WebSocketService.shared.notificationSubject) { notification in
+            if let type = notification["type"] as? String {
+                self.notificationType = type
+                
+                if type == "GAME_INVITE" {
+                    if let fromUser = notification["fromUser"] as? [String: Any],
+                       let name = fromUser["name"] as? String {
+                        self.notificationMessage = "\(name) invited you to play!"
+                        self.pendingNotification = notification
+                    }
+                } else if type == "INVITE_ACCEPTED" {
+                    if let fromUser = notification["fromUser"] as? [String: Any],
+                       let name = fromUser["name"] as? String {
+                        self.notificationMessage = "\(name) accepted your invite! 🎉"
+                    }
+                } else {
+                    self.notificationMessage = "You have a new notification"
+                }
+                
+                withAnimation {
+                    self.showingNotification = true
+                }
+                
+                // Auto hide after 6 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                    withAnimation {
+                        self.showingNotification = false
+                    }
+                }
+            }
+        }
+    }
+    
+    private func getNotificationIcon() -> String {
+        switch notificationType {
+        case "GAME_INVITE": return "envelope.fill"
+        case "INVITE_ACCEPTED": return "checkmark.circle.fill"
+        default: return "bell.fill"
+        }
+    }
+    
+    private func getNotificationTitle() -> String {
+        switch notificationType {
+        case "GAME_INVITE": return "Game Invite!"
+        case "INVITE_ACCEPTED": return "Invite Accepted!"
+        default: return "Notification"
+        }
+    }
+    
+    private func getNotificationColor() -> Color {
+        switch notificationType {
+        case "INVITE_ACCEPTED": return Color.blue
+        default: return Color.green
+        }
+    }
+}
+
+// MARK: - Invite Response Sheet
+struct InviteResponseSheet: View {
+    let notification: [String: Any]
+    let onDismiss: () -> Void
+    
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authManager: AuthManager
+    
+    @State private var isLoading = false
+    @State private var showMatchSuccess = false
+    @State private var senderName = ""
+    @State private var senderId = ""
+    
+    private let networkManager = NetworkManager()
+    
+    var body: some View {
+        ZStack {
+            Color(red: 0.1, green: 0.1, blue: 0.18)
+                .edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 24) {
+                if showMatchSuccess {
+                    matchSuccessView
+                } else {
+                    profileView
+                }
+            }
+            .padding(24)
+        }
+        .onAppear {
+            extractSenderInfo()
+        }
+    }
+    
+    private var profileView: some View {
+        VStack(spacing: 20) {
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(
+                        colors: [Color.purple, Color.pink],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 100, height: 100)
+                
+                Text(String(senderName.prefix(2)).uppercased())
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.white)
+            }
             
             // Name
             Text(senderName)
